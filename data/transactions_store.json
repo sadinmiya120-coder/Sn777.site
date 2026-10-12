@@ -6,7 +6,22 @@
     "status": "approved",
     "credited": true,
     "type": "deposit",
-    "timestamp": "2026-10-09T05:47:23.880Z"
+    "timestamp": "2026-10-09T05:47:23.880Z",
+    "username": "User",
+    "orderId": "ORD1791523109381",
+    "depositNo": "ORD1791523109381",
+    "serialNo": "ORD1791523109381",
+    "uid": "",
+    "phone": "",
+    "finalCredit": 200,
+    "balanceCredited": true,
+    "creditedUid": "",
+    "tradeNo": "",
+    "createdAt": "2026-10-09T05:47:23.880Z",
+    "updatedAt": "2026-10-12T17:21:47.994Z",
+    "approvedAt": "2026-10-12T17:21:47.993Z",
+    "notified": false,
+    "trxSubmitted": false
   },
   {
     "id": "ORD1791424778072",

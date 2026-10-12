@@ -197,9 +197,10 @@ const FS_PROJECT_ID = fbConfig.projectId || "xbet-mobcash";
 const FS_DB_ID = fbConfig.firestoreDatabaseId || TARGET_FIRESTORE_DATABASE_ID;
 const FS_API_KEY = fbConfig.apiKey || "AIzaSyAnjT1kOKf0WioVow4gQv63KUjIycn2FWI";
 
-async function firestoreRestPatch(collectionPath: string, docId: string, fields: Record<string, any>): Promise<boolean> {
+async function firestoreRestPatch(collectionPath: string, docId: string, fields: Record<string, any>, targetDbId?: string): Promise<boolean> {
   try {
-    const url = `https://firestore.googleapis.com/v1/projects/${FS_PROJECT_ID}/databases/${FS_DB_ID}/documents/${collectionPath}/${docId}?key=${FS_API_KEY}`;
+    const dbId = targetDbId || FS_DB_ID;
+    const url = `https://firestore.googleapis.com/v1/projects/${FS_PROJECT_ID}/databases/${dbId}/documents/${collectionPath}/${docId}?key=${FS_API_KEY}`;
     const firestoreFields: Record<string, any> = {};
     const updateMask: string[] = [];
 
@@ -233,9 +234,10 @@ async function firestoreRestPatch(collectionPath: string, docId: string, fields:
   }
 }
 
-async function firestoreRestGet(collectionPath: string, docId: string): Promise<Record<string, any> | null> {
+async function firestoreRestGet(collectionPath: string, docId: string, targetDbId?: string): Promise<Record<string, any> | null> {
   try {
-    const url = `https://firestore.googleapis.com/v1/projects/${FS_PROJECT_ID}/databases/${FS_DB_ID}/documents/${collectionPath}/${docId}?key=${FS_API_KEY}`;
+    const dbId = targetDbId || FS_DB_ID;
+    const url = `https://firestore.googleapis.com/v1/projects/${FS_PROJECT_ID}/databases/${dbId}/documents/${collectionPath}/${docId}?key=${FS_API_KEY}`;
     const res = await fetch(url);
     if (!res.ok) return null;
     const data = await res.json();
@@ -2198,16 +2200,26 @@ async function approveAndCreditDeposit(orderNoInput: string, paidAmountOverride?
     }
   }
 
-  // 3. Resolve from Firestore deposit document
+  // 3. Resolve from Firestore deposit document (check defaultDb and custom db)
+  const adminApp = getFirebaseAdmin();
+  const defaultDb = adminApp ? adminApp.firestore() : null;
   const db = getFirestoreDb();
+
   if (isGenericUid(candidateUid)) {
     try {
-      if (db) {
+      if (defaultDb) {
+        const snap = await defaultDb.collection("deposits").doc(cleanOrderNo).get().catch(() => null);
+        if (snap && snap.exists) depData = snap.data();
+      }
+      if (!depData && db) {
         const depSnap = await db.collection("deposits").doc(cleanOrderNo).get().catch(() => null);
         if (depSnap && depSnap.exists) depData = depSnap.data();
       }
       if (!depData) {
-        depData = await firestoreRestGet("deposits", cleanOrderNo);
+        depData = await firestoreRestGet("deposits", cleanOrderNo, "(default)");
+      }
+      if (!depData) {
+        depData = await firestoreRestGet("deposits", cleanOrderNo, FS_DB_ID);
       }
       if (depData) {
         if (isGenericUid(candidateUid)) {
@@ -2245,9 +2257,18 @@ async function approveAndCreditDeposit(orderNoInput: string, paidAmountOverride?
       }
       console.log(`[approveAndCreditDeposit] Successfully credited ৳${amount} to local user ${candidateUid}. New balance: ৳${newBal}`);
 
-      // 2. Fetch current Firestore user data (via admin SDK or REST API)
+      // 2. Fetch current Firestore user data (via defaultDb, custom db, or REST)
       let uData: any = null;
-      if (db) {
+      if (defaultDb) {
+        try {
+          const snap = await Promise.race([
+            defaultDb.collection("users").doc(candidateUid).get(),
+            new Promise((_, r) => setTimeout(() => r(new Error("timeout")), 1500))
+          ]).catch(() => null);
+          if (snap && snap.exists) uData = snap.data();
+        } catch (e) {}
+      }
+      if (!uData && db) {
         try {
           const snap = await Promise.race([
             db.collection("users").doc(candidateUid).get(),
@@ -2257,25 +2278,38 @@ async function approveAndCreditDeposit(orderNoInput: string, paidAmountOverride?
         } catch (e) {}
       }
       if (!uData) {
-        uData = await firestoreRestGet("users", candidateUid);
+        uData = await firestoreRestGet("users", candidateUid, "(default)");
+      }
+      if (!uData) {
+        uData = await firestoreRestGet("users", candidateUid, FS_DB_ID);
       }
 
       const curBal = uData ? (parseFloat(String(uData.balance || "0").replace(/,/g, "")) || 0) : curLocalBal;
       const fsNewBal = (curBal + amount).toFixed(2);
-      const curDep = uData ? (parseFloat(String(uData.totalDeposited || "0").replace(/,/g, "")) || 0) : 0;
+      const curDep = uData ? (parseFloat(String(uData.totalDeposited || uData.totalDeposit || uData.deposit || "0").replace(/,/g, "")) || 0) : 0;
       const curCount = uData ? Number(uData.approvedDepositsCount || 0) : 0;
 
       const userUpdatePayload = {
         balance: fsNewBal,
+        userBalance: fsNewBal,
+        mainBalance: fsNewBal,
         approvedDepositsCount: curCount + 1,
         totalDeposited: curDep + amount,
+        totalDeposit: curDep + amount,
+        deposit: curDep + amount,
         withdrawEnabled: ((curDep + amount) >= 940 && (curCount + 1) >= 2),
         updatedAt: new Date().toISOString(),
         username: candidateUsername || uData?.username || "User"
       };
 
-      // 3. Write user update to Firestore via REST API (guaranteed) & Admin SDK
-      await firestoreRestPatch("users", candidateUid, userUpdatePayload);
+      // 3. Write user update to BOTH Firestore databases simultaneously via Admin SDK & REST
+      await Promise.allSettled([
+        firestoreRestPatch("users", candidateUid, userUpdatePayload, "(default)"),
+        firestoreRestPatch("users", candidateUid, userUpdatePayload, FS_DB_ID)
+      ]);
+      if (defaultDb) {
+        defaultDb.collection("users").doc(candidateUid).set(userUpdatePayload, { merge: true }).catch(() => {});
+      }
       if (db) {
         db.collection("users").doc(candidateUid).set(userUpdatePayload, { merge: true }).catch(() => {});
       }
@@ -2283,7 +2317,7 @@ async function approveAndCreditDeposit(orderNoInput: string, paidAmountOverride?
       updatedBalance = fsNewBal;
       updateLocalUserBalance(candidateUid, fsNewBal, amount);
       if (candidateUsername) updateLocalUserBalance(candidateUsername, fsNewBal, amount);
-      console.log(`[approveAndCreditDeposit] Synced to Firestore user ${candidateUid}. New bal: ৳${fsNewBal}`);
+      console.log(`[approveAndCreditDeposit] Synced to BOTH Firestore databases user ${candidateUid}. New bal: ৳${fsNewBal}`);
     } catch (uErr) {
       console.error("[approveAndCreditDeposit] Error updating user balance:", uErr);
     }
@@ -2319,7 +2353,7 @@ async function approveAndCreditDeposit(orderNoInput: string, paidAmountOverride?
   };
   saveLocalTransaction(updatedLocal);
 
-  // Sync deposit records to Firestore (guaranteed via REST PATCH and Admin SDK)
+  // Sync deposit records to BOTH Firestore databases (guaranteed via Admin SDK & REST API)
   const approvedPayload = {
     id: cleanOrderNo,
     order_no: cleanOrderNo,
@@ -2340,10 +2374,20 @@ async function approveAndCreditDeposit(orderNoInput: string, paidAmountOverride?
 
   try {
     await Promise.allSettled([
-      firestoreRestPatch("deposits", cleanOrderNo, approvedPayload),
-      firestoreRestPatch("transactions", cleanOrderNo, approvedPayload),
-      finalUid ? firestoreRestPatch(`users/${finalUid}/history`, cleanOrderNo, approvedPayload) : Promise.resolve()
+      firestoreRestPatch("deposits", cleanOrderNo, approvedPayload, "(default)"),
+      firestoreRestPatch("deposits", cleanOrderNo, approvedPayload, FS_DB_ID),
+      firestoreRestPatch("transactions", cleanOrderNo, approvedPayload, "(default)"),
+      firestoreRestPatch("transactions", cleanOrderNo, approvedPayload, FS_DB_ID),
+      finalUid ? firestoreRestPatch(`users/${finalUid}/history`, cleanOrderNo, approvedPayload, "(default)") : Promise.resolve(),
+      finalUid ? firestoreRestPatch(`users/${finalUid}/history`, cleanOrderNo, approvedPayload, FS_DB_ID) : Promise.resolve()
     ]);
+    if (defaultDb) {
+      Promise.allSettled([
+        defaultDb.collection("deposits").doc(cleanOrderNo).set(approvedPayload, { merge: true }),
+        defaultDb.collection("transactions").doc(cleanOrderNo).set(approvedPayload, { merge: true }),
+        finalUid ? defaultDb.collection("users").doc(finalUid).collection("history").doc(cleanOrderNo).set(approvedPayload, { merge: true }) : Promise.resolve()
+      ]).catch(() => {});
+    }
     if (db) {
       Promise.allSettled([
         db.collection("deposits").doc(cleanOrderNo).set(approvedPayload, { merge: true }),
@@ -2351,7 +2395,7 @@ async function approveAndCreditDeposit(orderNoInput: string, paidAmountOverride?
         finalUid ? db.collection("users").doc(finalUid).collection("history").doc(cleanOrderNo).set(approvedPayload, { merge: true }) : Promise.resolve()
       ]).catch(() => {});
     }
-    console.log(`[approveAndCreditDeposit] Deposit ${cleanOrderNo} successfully marked approved in Firestore!`);
+    console.log(`[approveAndCreditDeposit] Deposit ${cleanOrderNo} successfully marked approved across (default) and custom Firestore!`);
   } catch (syncErr) {
     console.warn("[approveAndCreditDeposit] Firestore sync error:", syncErr);
   }

@@ -254,5 +254,13 @@
     "registrationDate": "Jun 15, 2026, 06:15:31 AM",
     "lastIp": "42.0.7.70",
     "deviceInfo": "Android Device"
+  },
+  "test_user_auto_sim": {
+    "uid": "TEST_USER_AUTO_SIM",
+    "username": "TEST_USER_AUTO_SIM",
+    "balance": "1877.00",
+    "updatedAt": "2026-10-12T17:21:41.347Z",
+    "totalDeposited": 2200,
+    "approvedDepositsCount": 2
   }
 }

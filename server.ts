@@ -2298,8 +2298,7 @@ async function approveAndCreditDeposit(orderNoInput: string, paidAmountOverride?
         totalDeposit: curDep + amount,
         deposit: curDep + amount,
         withdrawEnabled: ((curDep + amount) >= 940 && (curCount + 1) >= 2),
-        updatedAt: new Date().toISOString(),
-        username: candidateUsername || uData?.username || "User"
+        updatedAt: new Date().toISOString()
       };
 
       // 3. Write user update to BOTH Firestore databases simultaneously via Admin SDK & REST

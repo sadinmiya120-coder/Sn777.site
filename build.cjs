@@ -78,6 +78,14 @@ try {
 }
 
 try {
+  if (fs.existsSync("./patch_dg_baccarat_qc02.cjs")) {
+    require("./patch_dg_baccarat_qc02.cjs");
+  }
+} catch (e) {
+  console.warn("Patch DG baccarat QC02 warning:", e.message);
+}
+
+try {
   if (fs.existsSync("./patch_casino_app_install.cjs")) {
     require("./patch_casino_app_install.cjs");
   }

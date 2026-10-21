@@ -38,7 +38,7 @@ function patchFile(filePath) {
   if (p1 !== -1 && p2 !== -1 && p3 !== -1 && p1 < p2 && p2 < p3) {
     const endSlice = p3 + `Ue.parentId&&Ue.totalDeposited>=100&&Ue.rewardTier===1){`.length;
     const targetBlock = content.slice(p1, endSlice);
-    const validBlock = `if(L.email==="sadinmiya120@gmail.com"&&Ue.role!=="admin"){Es(W,{role:"admin"});}const _cu=(Ue.username&&Ue.username!=="ব্যবহারকারী"&&Ue.username!=="User")?Ue.username:(Ue.email?Ue.email.split("@")[0]:(Ue.phone||""));const _cn=(Ue.name&&Ue.name!=="সম্পূর্ণ নাম"&&Ue.name!=="ব্যবহারকারী")?Ue.name:_cu;Ue.username=_cu;Ue.name=_cn;try{localStorage.setItem("sn777_username",_cu);localStorage.setItem("sn777_user_name",_cn);}catch(e){}window.__sn777_user_profile={...Ue,uid:L.uid};window.__sn777_is_logged=true;ss(Ke=>({...Ke,...Ue}));if(Ue.parentId&&Ue.totalDeposited>=100&&Ue.rewardTier===1){`;
+    const validBlock = `if(L.email==="sadinmiya120@gmail.com"&&Ue.role!=="admin"){Es(W,{role:"admin"});}const _cu=Ue.username;const _cn=Ue.name;Ue.username=_cu;Ue.name=_cn;try{localStorage.setItem("sn777_username",_cu);localStorage.setItem("sn777_user_name",_cn);}catch(e){}window.__sn777_user_profile={...Ue,uid:L.uid};window.__sn777_is_logged=true;ss(Ke=>({...Ke,...Ue}));if(Ue.parentId&&Ue.totalDeposited>=100&&Ue.rewardTier===1){`;
 
     content = content.replace(targetBlock, validBlock);
   }
@@ -86,3 +86,4 @@ function patchFile(filePath) {
 
 patchFile(path.join(__dirname, 'dist_backup/assets/index-sn777-v9.js'));
 patchFile(path.join(__dirname, 'dist/assets/index-sn777-v9.js'));
+patchFile(path.join(__dirname, 'dist/assets/index-sn777-v10.js'));

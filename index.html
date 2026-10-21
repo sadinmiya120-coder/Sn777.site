@@ -218,7 +218,7 @@
         } catch(e) {}
         } catch(e) {}
       </script>
-      <script type="module" crossorigin src="/assets/index-sn777-v10.js?v=20260925_gopay"></script>
+      <script type="module" crossorigin src="/assets/index-sn777-v10.js?v=1792568633006_pt_v10"></script>
     <link rel="stylesheet" crossorigin href="/assets/index-C0XgLZC6-v3.css">
   <style id="sn777-payment-styles">
 /* EXACT DEPOSIT PAYMENT GATEWAY STYLES MATCHING SCREENSHOT - COMPACT SLIM */
@@ -778,6 +778,218 @@ window.showSnDepositModal = function(orderId, trxId, amount, method, walletNumbe
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<!-- Deposit Notification Single-View & Dismissal Guard -->
+<script type="text/javascript">
+(function() {
+  document.addEventListener("click", function(e) {
+    var target = e.target;
+    if (!target) return;
+    var txt = (target.textContent || target.innerText || "").trim();
+    var isOkBtn = txt === "ঠিক আছে" || (target.closest && target.closest("button") && (target.closest("button").textContent || "").includes("ঠিক আছে"));
+    if (isOkBtn) {
+      try {
+        var dismissed = JSON.parse(localStorage.getItem("sn777_dismissed_deposits") || "{}");
+        if (window.__sn777_last_notified_order) {
+          dismissed[window.__sn777_last_notified_order] = true;
+          fetch("/api/dismiss-deposit-notification", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ order_no: window.__sn777_last_notified_order })
+          }).catch(function() {});
+        }
+        var cur = localStorage.getItem("sn777_last_deposit_order") || localStorage.getItem("sn777_last_created_order");
+        if (cur) dismissed[cur] = true;
+        dismissed["ORD1791354325552"] = true;
+        localStorage.setItem("sn777_dismissed_deposits", JSON.stringify(dismissed));
+      } catch(err) {}
+    }
+  }, true);
+})();
+</script>
 
 
 
@@ -1995,35 +2207,6 @@ window.showSnDepositModal = function(orderId, trxId, amount, method, walletNumbe
 })();
 </script>
 <!-- End Sn777 Official Telegram Live Chat Widget -->
-
-<!-- Deposit Notification Single-View & Dismissal Guard -->
-<script type="text/javascript">
-(function() {
-  document.addEventListener("click", function(e) {
-    var target = e.target;
-    if (!target) return;
-    var txt = (target.textContent || target.innerText || "").trim();
-    var isOkBtn = txt === "ঠিক আছে" || (target.closest && target.closest("button") && (target.closest("button").textContent || "").includes("ঠিক আছে"));
-    if (isOkBtn) {
-      try {
-        var dismissed = JSON.parse(localStorage.getItem("sn777_dismissed_deposits") || "{}");
-        if (window.__sn777_last_notified_order) {
-          dismissed[window.__sn777_last_notified_order] = true;
-          fetch("/api/dismiss-deposit-notification", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ order_no: window.__sn777_last_notified_order })
-          }).catch(function() {});
-        }
-        var cur = localStorage.getItem("sn777_last_deposit_order") || localStorage.getItem("sn777_last_created_order");
-        if (cur) dismissed[cur] = true;
-        dismissed["ORD1791354325552"] = true;
-        localStorage.setItem("sn777_dismissed_deposits", JSON.stringify(dismissed));
-      } catch(err) {}
-    }
-  }, true);
-})();
-</script>
 
 </body>
 </html>

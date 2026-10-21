@@ -18,8 +18,8 @@
     "creditedUid": "",
     "tradeNo": "",
     "createdAt": "2026-10-09T05:47:23.880Z",
-    "updatedAt": "2026-10-12T17:21:47.994Z",
-    "approvedAt": "2026-10-12T17:21:47.993Z",
+    "updatedAt": "2026-10-20T01:50:02.508Z",
+    "approvedAt": "2026-10-20T01:50:02.507Z",
     "notified": false,
     "trxSubmitted": false
   },
@@ -356,11 +356,13 @@
     "balanceCredited": true,
     "creditedUid": "GrZ6724Y4fgsM7iEi1bgECyykGb2",
     "type": "deposit",
-    "updatedAt": "2026-10-03T04:21:01.255Z",
+    "updatedAt": "2026-10-18T10:42:12.833Z",
     "approvedAt": "2026-10-03T04:21:01.254Z",
     "trxSubmitted": false,
     "createdAt": "2026-10-03T04:12:18.853Z",
-    "tradeNo": ""
+    "tradeNo": "",
+    "notified": true,
+    "timestamp": "2026-10-03T04:12:18.853Z"
   },
   {
     "id": "ORD1790514188484",
@@ -669,13 +671,15 @@
     "status": "approved",
     "credited": true,
     "type": "deposit",
-    "updatedAt": "2026-10-03T04:21:03.263Z",
+    "updatedAt": "2026-10-18T10:42:12.834Z",
     "approvedAt": "2026-10-03T04:21:03.262Z",
     "trxSubmitted": false,
     "createdAt": "2026-09-25T12:09:26.402Z",
     "balanceCredited": true,
     "creditedUid": "GrZ6724Y4fgsM7iEi1bgECyykGb2",
-    "tradeNo": ""
+    "tradeNo": "",
+    "notified": true,
+    "timestamp": "2026-09-25T12:09:26.402Z"
   },
   {
     "id": "ORD1790337973984",
@@ -1011,7 +1015,7 @@
     "status": "approved",
     "credited": true,
     "type": "deposit",
-    "updatedAt": "2026-10-03T04:21:09.274Z",
+    "updatedAt": "2026-10-18T10:42:12.835Z",
     "processedAt": "2026-09-19T11:33:23.651Z",
     "createdAt": "2026-09-19T11:33:23.634Z",
     "cancelled": true,
@@ -1024,7 +1028,9 @@
     "creditedUid": "GrZ6724Y4fgsM7iEi1bgECyykGb2",
     "approvedAt": "2026-10-03T04:21:09.273Z",
     "trxSubmitted": false,
-    "tradeNo": ""
+    "tradeNo": "",
+    "notified": true,
+    "timestamp": "2026-09-19T11:33:23.634Z"
   },
   {
     "type": "deposit",
@@ -1483,13 +1489,15 @@
     "status": "approved",
     "credited": true,
     "type": "deposit",
-    "updatedAt": "2026-10-03T04:21:11.279Z",
+    "updatedAt": "2026-10-18T10:42:12.836Z",
     "approvedAt": "2026-10-03T04:21:11.279Z",
     "createdAt": "2026-09-09T01:00:12.735Z",
     "balanceCredited": true,
     "creditedUid": "GrZ6724Y4fgsM7iEi1bgECyykGb2",
     "trxSubmitted": false,
-    "tradeNo": ""
+    "tradeNo": "",
+    "notified": true,
+    "timestamp": "2026-09-09T01:00:12.735Z"
   },
   {
     "id": "ORD1788602422439",
@@ -1673,7 +1681,7 @@
     "amount": 100,
     "finalCredit": 100,
     "type": "deposit",
-    "updatedAt": "2026-10-03T04:21:13.292Z",
+    "updatedAt": "2026-10-18T10:42:12.837Z",
     "createdAt": "2026-09-05T08:47:08.071Z",
     "username": "GrZ6724Y4fgsM7iEi1bgECyykGb2",
     "orderId": "ORD_TEST_8888",
@@ -1684,7 +1692,9 @@
     "creditedUid": "GrZ6724Y4fgsM7iEi1bgECyykGb2",
     "approvedAt": "2026-10-03T04:21:13.291Z",
     "trxSubmitted": false,
-    "tradeNo": ""
+    "tradeNo": "",
+    "notified": true,
+    "timestamp": "2026-09-05T08:47:08.071Z"
   },
   {
     "id": "ORD_TEST_9999",

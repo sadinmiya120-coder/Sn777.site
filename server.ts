@@ -48,6 +48,7 @@ function isGenericUid(u: any): boolean {
 
 import fs from "fs";
 import express from "express";
+import compression from "compression";
 import { createServer as createViteServer } from "vite";
 import cors from "cors";
 import path from "path";
@@ -85,6 +86,15 @@ app.use((req, res, next) => {
   next();
 });
 
+app.use((req, res, next) => {
+  const host = (req.headers["x-forwarded-host"] || req.headers.host || "").toString().toLowerCase();
+  if (host.includes("sn777.top")) {
+    return res.redirect(301, `https://sn777.site${req.originalUrl || req.url || ""}`);
+  }
+  next();
+});
+
+app.use(compression());
 app.use(cors());
 app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ extended: true, limit: "50mb" }));
@@ -4160,10 +4170,13 @@ async function startServer() {
   }
 
   const staticOptions = {
-    setHeaders: (res: any) => {
-      res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0");
-      res.setHeader("Pragma", "no-cache");
-      res.setHeader("Expires", "0");
+    maxAge: '1d',
+    setHeaders: (res: any, filePath: string) => {
+      if (filePath.includes('/assets/') || filePath.endsWith('.js') || filePath.endsWith('.css') || filePath.endsWith('.webp') || filePath.endsWith('.png') || filePath.endsWith('.woff2')) {
+        res.setHeader("Cache-Control", "public, max-age=86400, stale-while-revalidate=604800");
+      } else {
+        res.setHeader("Cache-Control", "no-cache, must-revalidate");
+      }
     }
   };
   app.use(express.static(distPath, staticOptions));
@@ -4177,9 +4190,7 @@ async function startServer() {
     const fileInDist = path.join(distPath, 'assets', filename);
     const fileInBackup = path.join(distBackupPath, 'assets', filename);
 
-    res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0");
-    res.setHeader("Pragma", "no-cache");
-    res.setHeader("Expires", "0");
+    res.setHeader("Cache-Control", "public, max-age=86400, stale-while-revalidate=604800");
 
     if (fs.existsSync(fileInDist)) {
       return res.sendFile(fileInDist);
@@ -4209,24 +4220,28 @@ async function startServer() {
   app.get('/manifest.json', (req, res) => {
     const manifestPath = path.join(process.cwd(), 'manifest.json');
     res.setHeader('Content-Type', 'application/manifest+json; charset=utf-8');
-    res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0");
+    res.setHeader("Cache-Control", "public, max-age=3600");
     res.sendFile(manifestPath);
   });
 
   app.get('/sw.js', (req, res) => {
     const swPath = path.join(process.cwd(), 'sw.js');
     res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
-    res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0");
+    res.setHeader("Cache-Control", "no-cache");
     res.setHeader("Service-Worker-Allowed", "/");
     res.sendFile(swPath);
   });
 
   // SPA fallback
-  app.get('*', (req, res) => {
+  app.get('*', (req, res, next) => {
+    if (req.path.startsWith('/__aistudio') || req.path.startsWith('/api')) {
+      return next();
+    }
     const indexPath = fs.existsSync(path.join(distPath, 'index.html'))
       ? path.join(distPath, 'index.html')
       : path.join(distBackupPath, 'index.html');
-    res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0"); res.setHeader("Pragma", "no-cache"); res.setHeader("Expires", "0"); res.sendFile(indexPath);
+    res.setHeader("Cache-Control", "no-cache, must-revalidate");
+    res.sendFile(indexPath);
   });
 
   app.listen(PORT, "0.0.0.0", () => {

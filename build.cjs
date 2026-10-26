@@ -109,6 +109,144 @@ try {
   console.warn("Patch remove top banner warning:", e.message);
 }
 
+try {
+  if (fs.existsSync("./apply_full_pp_slot.cjs")) {
+    require("./apply_full_pp_slot.cjs");
+  } else if (fs.existsSync("./patch_slot_pp.cjs")) {
+    require("./patch_slot_pp.cjs");
+  }
+} catch (e) {
+  console.warn("Patch slot PP warning:", e.message);
+}
+
+try {
+  if (fs.existsSync("./patch_slot_pg.cjs")) {
+    require("./patch_slot_pg.cjs");
+  }
+} catch (e) {
+  console.warn("Patch slot PG warning:", e.message);
+}
+
+try {
+  if (fs.existsSync("./patch_game_rules_popup.cjs")) {
+    require("./patch_game_rules_popup.cjs");
+  }
+} catch (e) {
+  console.warn("Patch game rules popup warning:", e.message);
+}
+
+try {
+  if (fs.existsSync("./patch_slot_jdb.cjs")) {
+    require("./patch_slot_jdb.cjs");
+  }
+} catch (e) {
+  console.warn("Patch slot JDB warning:", e.message);
+}
+
+try {
+  if (fs.existsSync("./patch_slot_combo.cjs")) {
+    require("./patch_slot_combo.cjs");
+  }
+} catch (e) {
+  console.warn("Patch slot COMBO warning:", e.message);
+}
+
+try {
+  if (fs.existsSync("./patch_provider_direct_rules.cjs")) {
+    require("./patch_provider_direct_rules.cjs");
+  }
+} catch (e) {
+  console.warn("Patch provider direct rules warning:", e.message);
+}
+
+try {
+  if (fs.existsSync("./patch_slot_letsgo.cjs")) {
+    require("./patch_slot_letsgo.cjs");
+  }
+} catch (e) {
+  console.warn("Patch slot LETSGO warning:", e.message);
+}
+
+try {
+  if (fs.existsSync("./patch_slot_monopoly.cjs")) {
+    require("./patch_slot_monopoly.cjs");
+  }
+} catch (e) {
+  console.warn("Patch slot MONOPOLY warning:", e.message);
+}
+
+try {
+  if (fs.existsSync("./patch_slot_mg.cjs")) {
+    require("./patch_slot_mg.cjs");
+  }
+} catch (e) {
+  console.warn("Patch slot MG warning:", e.message);
+}
+
+try {
+  if (fs.existsSync("./patch_slot_yellowbat.cjs")) {
+    require("./patch_slot_yellowbat.cjs");
+  }
+} catch (e) {
+  console.warn("Patch slot YELLOWBAT warning:", e.message);
+}
+
+try {
+  if (fs.existsSync("./patch_slot_fastspin.cjs")) {
+    require("./patch_slot_fastspin.cjs");
+  }
+} catch (e) {
+  console.warn("Patch slot FASTSPIN warning:", e.message);
+}
+
+try {
+  if (fs.existsSync("./patch_slot_sg.cjs")) {
+    require("./patch_slot_sg.cjs");
+  }
+} catch (e) {
+  console.warn("Patch slot SG warning:", e.message);
+}
+
+try {
+  if (fs.existsSync("./patch_slot_nextspin.cjs")) {
+    require("./patch_slot_nextspin.cjs");
+  }
+} catch (e) {
+  console.warn("Patch slot NEXTSPIN warning:", e.message);
+}
+
+try {
+  if (fs.existsSync("./patch_slot_lucky365.cjs")) {
+    require("./patch_slot_lucky365.cjs");
+  }
+} catch (e) {
+  console.warn("Patch slot LUCKY365 warning:", e.message);
+}
+
+try {
+  if (fs.existsSync("./patch_slot_fiveg.cjs")) {
+    require("./patch_slot_fiveg.cjs");
+  }
+} catch (e) {
+  console.warn("Patch slot FIVEG warning:", e.message);
+}
+
+try {
+  if (fs.existsSync("./patch_slot_rich88.cjs")) {
+    require("./patch_slot_rich88.cjs");
+  }
+} catch (e) {
+  console.warn("Patch slot RICH88 warning:", e.message);
+}
+
+try {
+  if (fs.existsSync("./patch_performance_optimization.cjs")) {
+    require("./patch_performance_optimization.cjs");
+  }
+} catch (e) {
+  console.warn("Patch performance optimization warning:", e.message);
+}
+
 if (fs.existsSync("index.html")) {
   try {
     fs.copyFileSync("index.html", "dist/index.html");

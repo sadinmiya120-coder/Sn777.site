@@ -112,6 +112,16 @@ targets.forEach(filePath => {
       console.log(`[PT Full Fix] Added PT in category স্লট in ${path.basename(filePath)}`);
     }
   }
+  
+  // F. Add PP after FC in "স্লট" category
+  if (code.includes('category:"স্লট"') && !code.includes('title:"PP"')) {
+    const fcRegex = /\{title:"FC"[^}]+\}/;
+    if (fcRegex.test(code)) {
+      code = code.replace(fcRegex, (match) => `${match},{title:"PP",image:"https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEiMPZWLFyD6YlVWO4bmuZXAxlCYR8pjpFZHlqviWga8hDmHzZwLiaSt6FeiGbfDwQxVXO34aqc-cHN9KqGfgSKbcyt-ehIM8mniu9AdsRpPfyemOXN__7WFexeZGgtHPp4wVtduP_xKX6xDnB25i4wyXbSNBhxEczajBFOnaGElEspurSpxOCgdfAGGpasr/s120/provider-awcv2_pp%20(1).png",category:"স্লট",isHot:!0}`);
+      changed = true;
+      console.log(`[PT Full Fix] Added PP after FC in ${path.basename(filePath)}`);
+    }
+  }
 
   // C. Click handler
   if (!code.includes('if(E==="PT"){wr("PT");return}')) {

@@ -16,14 +16,7 @@ function getDepositFinalCredit(paidAmount: number, rawBonusOption?: string, reqF
     else if (opt.includes("10") || opt.includes("cashback")) bonusPercent = 10;
   }
 
-  // Automatic tier match from bonus cards (550, 1000, 1550, 2000, 3000, 5000, 10000, 15000, 20000, 30000, 50000 get 100% bonus)
-  const bonusCards = [550, 1000, 1550, 2000, 3000, 5000, 10000, 15000, 20000, 30000, 50000];
-  if (bonusPercent === 0) {
-    if (bonusCards.includes(deposit) || deposit === 550 || deposit >= 550) {
-      bonusPercent = 100;
-    }
-  }
-
+  // Only apply bonus if bonus option is explicitly selected or requested
   const bonusAmount = Math.round(deposit * (bonusPercent / 100));
   const finalCredit = deposit + bonusAmount;
   return { finalCredit, bonusAmount };

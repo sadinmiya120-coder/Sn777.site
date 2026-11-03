@@ -646,7 +646,7 @@ const tgWidgetHTML = `
         </div>
         <div class="sn-tg-info-sub">
           <span class="sn-tg-pill-dot"></span>
-          <span>অনলাইন • টেলিগ্রাম সাপোর্ট টিম</span>
+          <span>অনলাইন • লাইভ সাপোর্ট টিম</span>
         </div>
       </div>
     </div>
@@ -672,9 +672,9 @@ const tgWidgetHTML = `
     <!-- Welcome message from admin -->
     <div class="sn-tg-bubble-wrap admin">
       <div class="sn-tg-bubble">
-        আসসালামু আলাইকুম! 👋 Sn777 অফিসিয়াল টেলিগ্রাম লাইভ সাপোর্টে আপনাকে স্বাগতম।
+        আসসালামু আলাইকুম! 👋 Sn777 অফিসিয়াল লাইভ সাপোর্টে আপনাকে স্বাগতম।
         <br><br>
-        আপনার ডিপোজিট, উইথড্র, বোনাস বা অ্যাকাউন্ট সংক্রান্ত যেকোনো সমস্যা হলে নিচে লিখুন অথবা দ্রুত উত্তরের জন্য আমাদের টেলিগ্রাম চ্যানেলে যোগাযোগ করুন।
+        আপনার ডিপোজিট, উইথড্র, বোনাস বা অ্যাকাউন্ট সংক্রান্ত যেকোনো সমস্যা হলে নিচে লিখুন অথবা দ্রুত উত্তরের জন্য আমাদের টেলিগ্রাম লাইভ চ্যাট যোগাযোগ করুন।
         <div class="sn-tg-bubble-meta">
           <span>সাপোর্ট এজেন্ট</span> • <span>এখন</span>
         </div>
@@ -682,9 +682,9 @@ const tgWidgetHTML = `
       
       <!-- Quick Chips -->
       <div class="sn-tg-quick-chips">
+        <div class="sn-tg-chip" onclick="handleSnChipClick('💬 টেলিগ্রাম লাইভ চ্যাট')">💬 টেলিগ্রাম লাইভ চ্যাট</div>
         <div class="sn-tg-chip" onclick="handleSnChipClick('💰 ডিপোজিট জমা হয়নি')">💰 ডিপোজিট জমা হয়নি</div>
         <div class="sn-tg-chip" onclick="handleSnChipClick('💸 উইথড্রল সমস্যা')">💸 উইথড্রল সমস্যা</div>
-        <div class="sn-tg-chip" onclick="handleSnChipClick('🎁 ৭৭৭ টাকা বোনাস চাই')">🎁 ৭৭৭ টাকা বোনাস চাই</div>
         <div class="sn-tg-chip" onclick="handleSnChipClick('📱 টেলিগ্রাম গ্রুপে যুক্ত হব')">📱 টেলিগ্রাম গ্রুপ</div>
       </div>
     </div>
@@ -871,6 +871,10 @@ const tgWidgetHTML = `
 
   window.handleSnChipClick = function(text) {
     if (text.includes("টেলিগ্রাম গ্রুপ") || text.includes("চ্যানেলে")) {
+      window.open("https://t.me/Sn777bd", "_blank");
+      return;
+    }
+    if (text.includes("টেলিগ্রাম লাইভ চ্যাট")) {
       window.open("https://t.me/sn777top", "_blank");
       return;
     }
@@ -878,6 +882,77 @@ const tgWidgetHTML = `
     if (input) {
       input.value = text;
       window.sendSnTgMessage();
+    }
+
+    // Auto reply for deposit issue chip
+    if (text.includes("ডিপোজিট জমা হয়নি") || text.includes("ডিপোজিট জমা")) {
+      setTimeout(function() {
+        var autoReply = '<div style="font-family:sans-serif;">' +
+          '<div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid rgba(255,255,255,0.12);">' +
+            '<span style="font-size:15px;">📌</span>' +
+            '<span style="font-weight:700;color:#38bdf8;font-size:13px;">ডিপোজিট সহায়াত তথ্য</span>' +
+          '</div>' +
+          '<p style="margin:0 0 10px 0;font-weight:600;color:#f8fafc;font-size:12.5px;">' +
+            'অনুগ্রহ করে নিচের তথ্যগুলো লিখে পাঠান:' +
+          '</p>' +
+          '<div style="background:rgba(15,23,42,0.65);border:1px solid rgba(56,189,248,0.25);border-radius:12px;padding:10px 12px;display:flex;flex-direction:column;gap:8px;">' +
+            '<div style="display:flex;align-items:center;gap:8px;">' +
+              '<span style="background:#0284c7;color:#ffffff;border-radius:50%;width:20px;height:20px;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;flex-shrink:0;">১</span>' +
+              '<span style="font-size:12px;color:#e2e8f0;">কত টাকা ডিপোজিট করেছেন?</span>' +
+            '</div>' +
+            '<div style="display:flex;align-items:center;gap:8px;">' +
+              '<span style="background:#0284c7;color:#ffffff;border-radius:50%;width:20px;height:20px;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;flex-shrink:0;">২</span>' +
+              '<span style="font-size:12px;color:#e2e8f0;">আপনার ইউজার নেম</span>' +
+            '</div>' +
+            '<div style="display:flex;align-items:center;gap:8px;">' +
+              '<span style="background:#0284c7;color:#ffffff;border-radius:50%;width:20px;height:20px;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;flex-shrink:0;">৩</span>' +
+              '<span style="font-size:12px;color:#e2e8f0;">ট্রানজেকশন আইডি <strong style="color:#38bdf8;">(TrxID)</strong></span>' +
+            '</div>' +
+            '<div style="display:flex;align-items:flex-start;gap:8px;">' +
+              '<span style="background:#0284c7;color:#ffffff;border-radius:50%;width:20px;height:20px;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;flex-shrink:0;margin-top:1px;">৪</span>' +
+              '<span style="font-size:12px;color:#e2e8f0;">পেমেন্টের স্ক্রিনশট <span style="color:#94a3b8;font-size:11px;">(নিচের ক্লিপ 📎 বাটনে ক্লিক করে পাঠান)</span></span>' +
+            '</div>' +
+          '</div>' +
+        '</div>';
+        var timeStr = getTimeStr();
+        appendTgBubble(autoReply, "admin", timeStr, true);
+        saveMessageToStorage({ content: autoReply, type: "admin", time: timeStr, isHtml: true });
+      }, 700);
+    } else if (text.includes("উইথড্রল সমস্যা") || text.includes("উইথড্রল")) {
+      setTimeout(function() {
+        var autoReply = '<div style="font-family:sans-serif;">' +
+          '<div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid rgba(255,255,255,0.12);">' +
+            '<span style="font-size:15px;">💸</span>' +
+            '<span style="font-weight:700;color:#fb7185;font-size:13px;">উইথড্রল সহায়তা তথ্য</span>' +
+          '</div>' +
+          '<p style="margin:0 0 6px 0;font-weight:600;color:#f8fafc;font-size:12.5px;">' +
+            'অনুগ্রহ করে নিচের তথ্যগুলো লিখে পাঠান:' +
+          '</p>' +
+          '<div style="background:rgba(251,113,133,0.12);border:1px solid rgba(251,113,133,0.3);border-radius:8px;padding:10px;margin-bottom:12px;font-size:12px;color:#fecdd3;line-height:1.5;">' +
+            '⚠️ <b>উত্তোলন করতে হলে অবশ্যই প্রথমে ডিপোজিট করতে হবে</b>, তারপরে আপনি সকল টাকা উত্তোলন দিতে পারবেন, কোন টার্নওভার নেই。<br><br>' +
+            '<b>কেন এই নিয়ম?</b> ফ্রি ৭৭৭ টাকা এবং উইথড্র সুবিধা শুধুমাত্র অরিজিনাল ও ভেরিফাইড ইউজারদের জন্য। অনেকে একাধিক ফেক অ্যাকাউন্ট খুলে সিস্টেমের অপব্যবহার করছেন, তাই জেনুইন ইউজারদের অধিকার সুরক্ষিত রাখতে এই ভেরিফিকেশন রুলস বাধ্যতামূলক।<br><br>' +
+            '<b>যা করতে হবে:</b> প্রথম উইথড্র করার পূর্বে যেকোনো পরিমাণ ডিপোজিট করে আপনার অ্যাকাউন্টটি ভেরিফাই করুন।<br><br>' +
+            '<b>সুবিধা:</b> আপনার ডিপোজিট করা টাকা এবং ফ্রি বোনাস—দুটোই আপনার অ্যাকাউন্টে থাকবে এবং ভেরিফিকেশন সম্পন্ন হওয়ার পর একসাথে সম্পূর্ণ টাকা উইথড্র করতে পারবেন।' +
+          '</div>' +
+          '<div style="background:rgba(15,23,42,0.65);border:1px solid rgba(251,113,133,0.25);border-radius:12px;padding:10px 12px;display:flex;flex-direction:column;gap:8px;">' +
+            '<div style="display:flex;align-items:center;gap:8px;">' +
+              '<span style="background:#e11d48;color:#ffffff;border-radius:50%;width:20px;height:20px;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;flex-shrink:0;">১</span>' +
+              '<span style="font-size:12px;color:#e2e8f0;">কত টাকা উইথড্র করেছেন?</span>' +
+            '</div>' +
+            '<div style="display:flex;align-items:center;gap:8px;">' +
+              '<span style="background:#e11d48;color:#ffffff;border-radius:50%;width:20px;height:20px;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;flex-shrink:0;">২</span>' +
+              '<span style="font-size:12px;color:#e2e8f0;">আপনার ইউজার নেম</span>' +
+            '</div>' +
+            '<div style="display:flex;align-items:center;gap:8px;">' +
+              '<span style="background:#e11d48;color:#ffffff;border-radius:50%;width:20px;height:20px;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;flex-shrink:0;">৩</span>' +
+              '<span style="font-size:12px;color:#e2e8f0;">উইথড্রল নম্বর (বিকাশ/নগদ/রকেট)</span>' +
+            '</div>' +
+          '</div>' +
+        '</div>';
+        var timeStr = getTimeStr();
+        appendTgBubble(autoReply, "admin", timeStr, true);
+        saveMessageToStorage({ content: autoReply, type: "admin", time: timeStr, isHtml: true });
+      }, 700);
     }
   };
 

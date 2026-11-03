@@ -48,8 +48,8 @@ kc=async E=>{
       if(E==="HOTROAD"){wr("HOTROAD");return}
       if(E==="PT"){wr("PT");return}
     }
-    // For JILI, FC, PP, PG, JDB, COMBO and PP_SLOT, open rules modal directly without entering folder
-    if(E==="JILI"||E==="FC"||E==="PP"||E==="PP_SLOT"||E==="PG"||E==="JDB"||E==="COMBO"){
+    // For JILI, FC, PP, PG, JDB, COMBO, AVIATOR and PP_SLOT, open rules modal directly without entering folder
+    if(E==="JILI"||E==="FC"||E==="PP"||E==="PP_SLOT"||E==="PG"||E==="JDB"||E==="COMBO"||E==="AVIATOR"){
       if(!L){rr("FIRST");Wt(!0);return}
       xe(!0);
       try{

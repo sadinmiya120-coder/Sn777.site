@@ -1,10 +1,10 @@
 const fs = require("fs");
 const esbuild = require("esbuild");
 const jsFiles = [
-  "dist/assets/index-sn777-v5.js",
-  "dist/assets/index-CUhzlpga-v3.js",
-  "dist_backup/assets/index-sn777-v5.js",
-  "dist_backup/assets/index-CUhzlpga-v3.js"
+  "dist/assets/index-sn777-v12.js",
+  "dist_backup/assets/index-sn777-v12.js",
+  "public/assets/index-sn777-v12.js",
+  "original-index-sn777-v5.js"
 ];
 
 jsFiles.forEach(filePath => {
@@ -17,28 +17,11 @@ jsFiles.forEach(filePath => {
     'IR($R,{experimentalAutoDetectLongPolling:!0})'
   );
 
-  // 2. Wrap En (getDoc) with offline catch fallback
-  const oldEn = 'function En(n){n=Lt(n,mn);const e=Lt(n.firestore,An),t=Kn(e);return _R(t,n._key).then((s=>_1(e,n,s)))}';
-  const newEn = 'function En(n){n=Lt(n,mn);const e=Lt(n.firestore,An),t=Kn(e);return _R(t,n._key).then((s=>_1(e,n,s))).catch((err)=>{console.warn("Firestore En offline/network handled:",err&&err.message);return{exists:()=>false,data:()=>({}),id:n?._key?.path?.lastSegment()||""}})}';
-  if (code.includes(oldEn)) {
-    code = code.replace(oldEn, newEn);
-    console.log(`[${filePath}] En wrapped with offline fallback.`);
-  }
-
-  // 3. Wrap Gn (getDocs) with offline catch fallback
-  const oldGn = 'function Gn(n){n=Lt(n,As);const e=Lt(n.firestore,An),t=Kn(e),s=new bl(e);return zR(n._query),TR(t,n._query).then((a=>new Ii(e,s,n,a)))}';
-  const newGn = 'function Gn(n){n=Lt(n,As);const e=Lt(n.firestore,An),t=Kn(e),s=new bl(e);return zR(n._query),TR(t,n._query).then((a=>new Ii(e,s,n,a))).catch((err)=>{console.warn("Firestore Gn offline/network handled:",err&&err.message);return{empty:true,docs:[],size:0,forEach:()=>{}}})}';
-  if (code.includes(oldGn)) {
-    code = code.replace(oldGn, newGn);
-    console.log(`[${filePath}] Gn wrapped with offline fallback.`);
-  }
-
-  // Remove the specific annoying console log from firestore
-  const logStr = `this.la("Backend didn't respond within 10 seconds.")`;
-  const newLogStr = 'null';
-  if (code.includes(logStr)) {
-    code = code.replace(logStr, newLogStr);
-    console.log(`[${filePath}] Removed backend 10 seconds log.`);
+  // 2. Silence OnlineStateTracker offline warning
+  const targetPattern = /la\(e\)\{const t=`Could not reach Cloud Firestore backend\.[^`]+`;this\.aa\?\(os\(t\),this\.aa=!1\):we\("OnlineStateTracker",t\)\}/g;
+  if (targetPattern.test(code)) {
+    code = code.replace(targetPattern, "la(e){this.aa=!1;return}");
+    console.log(`[${filePath}] Silenced Firestore backend offline log.`);
   }
 
   try {

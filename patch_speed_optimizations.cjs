@@ -1,6 +1,8 @@
 const fs = require("fs");
 
 const files = [
+  "dist/assets/index-sn777-v12.js",
+  "dist_backup/assets/index-sn777-v12.js",
   "dist/assets/index-sn777-v5.js",
   "dist_backup/assets/index-sn777-v5.js",
   "dist/assets/index-sn777-v6.js",

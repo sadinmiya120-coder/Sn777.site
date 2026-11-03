@@ -8,9 +8,9 @@ const pgIconUrl = 'https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEiS
 const pgSlotProviderItem = `{title:"PG",image:"${pgIconUrl}",category:"স্লট",isHot:!1}`;
 
 const pgSlotGames = [
-  `{title:"Mahjong Ways 2",image:"https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEhfWL1oXVK-cXPNStj4_NPXCW_KM0f64f8QAKSbr10PoR74XR8O_s50sKpTZ7Tsid_qkkFNHnl9aW9K2-Ncogso481X9XTTiCR8nd76nSL_oyL86BBvNsmmFBbim52HAPxKsNSs3aqcD1PPhmEDvPmrtm326-15qRoivyaydTKpMED6nlXuxh_Dvhx3WvNg/s120/lightIcon%20(9).webp",category:"PG",isHot:!0}`,
-  `{title:"Fortune Tiger",image:"https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEjTjrqbBrMwileUvFPyFyvMCkCjV-O8nkMbJyP_9hEAR40ILnjbUiBhFIAOwP2zBFR59pVwprRTpejwJaASfKqx8xWqzt2R-XknWjhYtGUz5MZAvYLB96Pp9b7AZ8qxX2iCo7bJasPA-stIDbQBk9_vbBvtD4N1urpud_SND-xuyIhSoTzyZIriVSJvpz6x/s256/images%20(22).jpeg",category:"PG",isHot:!0}`,
-  `{title:"Wild Bounty Showdown",image:"https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEhoTlILdIymPMEb13u6GWo55Ph1AYc9VdD7Uge3OyV7Uaxqf8sC13BIY4y-D3QuO5UpVU7bRYQmnv-SHqmfT8kg7NN4Op8HvONlwP66E80PTJMCbf4XU-c7RhxNfQWZ8wLYC59HXqkHCBYxG0Va6xBguhYJDn5TGnZrfsXEIDpdL5zpijKXqj8kURqAENlq/s120/lightIcon%20(2).webp",category:"PG",isHot:!0}`
+  `{title:"Mahjong Ways 2",image:"https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEhfWL1oXVK-cXPNStj4_NPXCW_KM0f64f8QAKSbr10PoR74XR8O_s50sKpTZ7Tsid_qkkFNHnl9aW9K2-Ncogso481X9XTTiCR8nd76nSL_oyL86BBvNsmmFBbim52HAPxKsNSs3aqcD1PPhmEDvPmrtm326-15qRoivyaydTKpMED6nlXuxh_Dvhx3WvNg/s120/lightIcon%20(9).webp",category:"PG",isHot:!1}`,
+  `{title:"Fortune Tiger",image:"https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEjTjrqbBrMwileUvFPyFyvMCkCjV-O8nkMbJyP_9hEAR40ILnjbUiBhFIAOwP2zBFR59pVwprRTpejwJaASfKqx8xWqzt2R-XknWjhYtGUz5MZAvYLB96Pp9b7AZ8qxX2iCo7bJasPA-stIDbQBk9_vbBvtD4N1urpud_SND-xuyIhSoTzyZIriVSJvpz6x/s256/images%20(22).jpeg",category:"PG",isHot:!1}`,
+  `{title:"Wild Bounty Showdown",image:"https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEhoTlILdIymPMEb13u6GWo55Ph1AYc9VdD7Uge3OyV7Uaxqf8sC13BIY4y-D3QuO5UpVU7bRYQmnv-SHqmfT8kg7NN4Op8HvONlwP66E80PTJMCbf4XU-c7RhxNfQWZ8wLYC59HXqkHCBYxG0Va6xBguhYJDn5TGnZrfsXEIDpdL5zpijKXqj8kURqAENlq/s120/lightIcon%20(2).webp",category:"PG",isHot:!1}`
 ];
 
 const jsTargets = [

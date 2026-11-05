@@ -8,7 +8,7 @@ const relaxIcon = 'https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEiV
 const relaxProviderItem = `{title:"RELAX",image:"${relaxIcon}",category:"স্লট",isHot:!1}`;
 
 const relaxSlotGames = [
-  `{title:"Relax Fortune",image:"${relaxIcon}",category:"RELAX",isHot:!0}`,
+  `{title:"Relax Fortune",image:"${relaxIcon}",category:"RELAX",isHot:!1}`,
   `{title:"Relax Deluxe",image:"${relaxIcon}",category:"RELAX",isHot:!1}`
 ];
 

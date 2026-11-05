@@ -8,7 +8,7 @@ const rtIcon = 'https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEh2n5Q
 const rtProviderItem = `{title:"RT",image:"${rtIcon}",category:"স্লট",isHot:!1}`;
 
 const rtSlotGames = [
-  `{title:"RT Fortune",image:"${rtIcon}",category:"RT",isHot:!0}`,
+  `{title:"RT Fortune",image:"${rtIcon}",category:"RT",isHot:!1}`,
   `{title:"RT Deluxe",image:"${rtIcon}",category:"RT",isHot:!1}`
 ];
 

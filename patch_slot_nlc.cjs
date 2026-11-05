@@ -8,7 +8,7 @@ const nlcIcon = 'https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEhCx7
 const nlcProviderItem = `{title:"NLC",image:"${nlcIcon}",category:"স্লট",isHot:!1}`;
 
 const nlcSlotGames = [
-  `{title:"NLC Fortune",image:"${nlcIcon}",category:"NLC",isHot:!0}`,
+  `{title:"NLC Fortune",image:"${nlcIcon}",category:"NLC",isHot:!1}`,
   `{title:"NLC Deluxe",image:"${nlcIcon}",category:"NLC",isHot:!1}`
 ];
 

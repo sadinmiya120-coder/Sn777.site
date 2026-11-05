@@ -8,7 +8,7 @@ const octoplayIcon = 'https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXs
 const octoplayProviderItem = `{title:"OCTOPLAY",image:"${octoplayIcon}",category:"স্লট",isHot:!1}`;
 
 const octoplaySlotGames = [
-  `{title:"Octoplay Fortune",image:"${octoplayIcon}",category:"OCTOPLAY",isHot:!0}`,
+  `{title:"Octoplay Fortune",image:"${octoplayIcon}",category:"OCTOPLAY",isHot:!1}`,
   `{title:"Octoplay Deluxe",image:"${octoplayIcon}",category:"OCTOPLAY",isHot:!1}`
 ];
 

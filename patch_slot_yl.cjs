@@ -8,7 +8,7 @@ const ylIcon = 'https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEj8JeD
 const ylProviderItem = `{title:"YL",image:"${ylIcon}",category:"স্লট",isHot:!1}`;
 
 const ylSlotGames = [
-  `{title:"YL Fortune",image:"${ylIcon}",category:"YL",isHot:!0}`,
+  `{title:"YL Fortune",image:"${ylIcon}",category:"YL",isHot:!1}`,
   `{title:"YL Deluxe",image:"${ylIcon}",category:"YL",isHot:!1}`
 ];
 

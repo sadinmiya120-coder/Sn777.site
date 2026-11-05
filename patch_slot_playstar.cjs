@@ -8,7 +8,7 @@ const playstarIcon = 'https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXs
 const playstarProviderItem = `{title:"PLAYSTAR",image:"${playstarIcon}",category:"স্লট",isHot:!1}`;
 
 const playstarSlotGames = [
-  `{title:"Playstar Fortune",image:"${playstarIcon}",category:"PLAYSTAR",isHot:!0}`,
+  `{title:"Playstar Fortune",image:"${playstarIcon}",category:"PLAYSTAR",isHot:!1}`,
   `{title:"Playstar Deluxe",image:"${playstarIcon}",category:"PLAYSTAR",isHot:!1}`
 ];
 

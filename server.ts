@@ -46,16 +46,9 @@ import { fileURLToPath } from "url";
 const appDir = process.cwd();
 import crypto from "crypto";
 
-let admin: any = null;
-async function initFirebaseAdmin() {
-  try {
-    const mod = await import("firebase-admin");
-    admin = mod.default || mod;
-  } catch (e) {
-    admin = null;
-  }
-}
-initFirebaseAdmin();
+import { initializeApp as initAdminApp, getApps as getAdminApps, cert as adminCert } from "firebase-admin/app";
+import { getFirestore as getAdminFirestore } from "firebase-admin/firestore";
+import { getAuth as getAdminAuth } from "firebase-admin/auth";
 
 import {
   parseSms,
@@ -158,29 +151,73 @@ async function getFirestoreWithdrawalsSafe(adminApp: any) {
   }
 }
 
-// Firebase Admin initialization (lazy)
-const TARGET_FIRESTORE_DATABASE_ID = "ai-studio-sn777site-c8c0dbda-551f-4b00-a0b0-12cb12672e48";
+// Guaranteed REST API Fallback for Firestore using public Firebase Applet API key
+const FIREBASE_APPLET_CONFIG_PATH = path.join(process.cwd(), "firebase-applet-config.json");
+let fbConfig: any = {};
+if (fs.existsSync(FIREBASE_APPLET_CONFIG_PATH)) {
+  try {
+    fbConfig = JSON.parse(fs.readFileSync(FIREBASE_APPLET_CONFIG_PATH, "utf8"));
+  } catch (e) {}
+}
+
+const TARGET_FIRESTORE_DATABASE_ID = fbConfig.firestoreDatabaseId || "ai-studio-sn777site-c8c0dbda-551f-4b00-a0b0-12cb12672e48";
+const FS_PROJECT_ID = fbConfig.projectId || "xbet-mobcash";
+const FS_DB_ID = fbConfig.firestoreDatabaseId || TARGET_FIRESTORE_DATABASE_ID;
+const FS_API_KEY = fbConfig.apiKey || "AIzaSyAnjT1kOKf0WioVow4gQv63KUjIycn2FWI";
+
 const paymentOrdersCache = new Map<string, { uid: string; username: string; phone: string; amount: number; time: number }>();
 
+let firebaseAdminApp: any = null;
+
 function getFirebaseAdmin() {
-  if (!admin) return null;
-  if (!admin.apps || admin.apps.length === 0) {
-    const rawKey = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
-    if (rawKey && rawKey.trim() !== "{}" && rawKey.trim() !== "") {
-      try {
-        const serviceAccount = JSON.parse(rawKey);
-        if (serviceAccount && serviceAccount.project_id) {
-          admin.initializeApp({
-            credential: admin.credential.cert(serviceAccount as any),
-            databaseURL: "https://xbet-mobcash-default-rtdb.firebaseio.com"
-          });
+  if (firebaseAdminApp) return firebaseAdminApp;
+
+  try {
+    const apps = getAdminApps();
+    let app = apps.length > 0 ? apps[0] : null;
+
+    if (!app) {
+      const rawKey = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
+      if (rawKey && rawKey.trim() !== "{}" && rawKey.trim() !== "") {
+        try {
+          const serviceAccount = JSON.parse(rawKey);
+          if (serviceAccount && serviceAccount.project_id) {
+            app = initAdminApp({
+              credential: adminCert(serviceAccount as any),
+              projectId: serviceAccount.project_id
+            });
+          }
+        } catch (e: any) {
+          console.error("Firebase Admin service account parse notice:", e?.message);
         }
-      } catch (e: any) {
-        console.error("Firebase Admin init error:", e);
+      }
+
+      // Initialize with Cloud project ID / Application Default Credentials
+      if (!app) {
+        try {
+          app = initAdminApp({
+            projectId: FS_PROJECT_ID
+          });
+        } catch (adcErr: any) {
+          console.warn("Firebase Admin default init notice:", adcErr?.message);
+        }
       }
     }
+
+    if (app) {
+      firebaseAdminApp = {
+        app,
+        apps: [app],
+        firestore: () => getAdminFirestore(app, TARGET_FIRESTORE_DATABASE_ID),
+        auth: () => getAdminAuth(app)
+      };
+      return firebaseAdminApp;
+    }
+  } catch (err: any) {
+    console.error("Firebase Admin init error:", err?.message);
   }
-  return (admin && admin.apps && admin.apps.length > 0) ? admin : null;
+
+  return null;
 }
 
 function getFirestoreDb() {
@@ -192,19 +229,6 @@ function getFirestoreDb() {
     return null;
   }
 }
-
-// Guaranteed REST API Fallback for Firestore using public Firebase Applet API key
-const FIREBASE_APPLET_CONFIG_PATH = path.join(process.cwd(), "firebase-applet-config.json");
-let fbConfig: any = {};
-if (fs.existsSync(FIREBASE_APPLET_CONFIG_PATH)) {
-  try {
-    fbConfig = JSON.parse(fs.readFileSync(FIREBASE_APPLET_CONFIG_PATH, "utf8"));
-  } catch (e) {}
-}
-
-const FS_PROJECT_ID = fbConfig.projectId || "xbet-mobcash";
-const FS_DB_ID = fbConfig.firestoreDatabaseId || TARGET_FIRESTORE_DATABASE_ID;
-const FS_API_KEY = fbConfig.apiKey || "AIzaSyAnjT1kOKf0WioVow4gQv63KUjIycn2FWI";
 
 async function firestoreRestPatch(collectionPath: string, docId: string, fields: Record<string, any>, targetDbId?: string): Promise<boolean> {
   try {
@@ -3950,9 +3974,12 @@ function generateGoPaySign(params: Record<string, any>, secretKey: string): stri
 // Initiate GoPay / Automatic Payment
 app.all(["/gopay_pay.php", "/pay.php", "/gopay", "/propay_pay.php", "/api/gopay-pay", "/api/propay-pay", "/api/create-payment"], async (req, res) => {
   try {
-    // SECURITY FIX: Prevent guest/unauthenticated payment initiation
-    const rawUid = String(req.query.uid || req.body?.uid || "").trim();
+    // SECURITY CHECK: Prevent unauthenticated payment initiation
+    const rawUid = String(req.query.uid || req.body?.uid || req.query.username || req.body?.username || "").trim();
     if (!rawUid || rawUid.startsWith("guest_")) {
+      if (req.method === "GET") {
+        return res.redirect("/?login_needed=1");
+      }
       return res.status(403).json({ error: "Unauthorized: Please log in to initiate a payment." });
     }
 
@@ -3985,8 +4012,23 @@ app.all(["/gopay_pay.php", "/pay.php", "/gopay", "/propay_pay.php", "/api/gopay-
     const protocol = req.headers["x-forwarded-proto"] || req.protocol || "https";
     const origin = `${protocol}://${host}`;
 
-    const pay_type = (method === "nagad") ? "2201" : "2202";
-    const goods_name = (method === "nagad") ? "NAGAD" : "BKASH";
+    let pay_type = "2202";
+    let goods_name = "BKASH";
+    const mLow = method.toLowerCase();
+    if (mLow.includes("bkash")) {
+      pay_type = "2202";
+      goods_name = "BKASH";
+    } else if (mLow.includes("nagad")) {
+      pay_type = "2201";
+      goods_name = "NAGAD";
+    } else if (mLow.includes("rocket")) {
+      pay_type = "2203";
+      goods_name = "ROCKET";
+    } else if (mLow.includes("upay")) {
+      pay_type = "2204";
+      goods_name = "UPAY";
+    }
+
     const order_date = formatGoPayOrderDate();
     const returnUrl = `https://sn777.site/return?order_no=${encodeURIComponent(order_no)}`;
     const notifyUrl = process.env.GOPAY_NOTIFY_URL || `https://sn777.site/gopay_notify.php`;
@@ -4065,22 +4107,23 @@ app.all(["/gopay_pay.php", "/pay.php", "/gopay", "/propay_pay.php", "/api/gopay-
 
     console.log(`[GoPay Initiate] Calling ${GOPAY_API_URL} for order ${order_no}, amount ${amount}, method ${goods_name}`);
 
-    // Request Cashier URL from GoPay Gateway with 2.5s fast timeout
+    // Request Cashier URL from GoPay Gateway with 8s timeout
     const formBody = new URLSearchParams(gopayParams).toString();
     let resText = "";
     try {
       const gopayRes = await fetch(GOPAY_API_URL, {
         method: "POST",
         headers: {
-          "Content-Type": "application/x-www-form-urlencoded"
+          "Content-Type": "application/x-www-form-urlencoded",
+          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
         },
         body: formBody,
-        signal: AbortSignal.timeout(800)
+        signal: AbortSignal.timeout(8000)
       });
       resText = await gopayRes.text();
-      console.log(`[GoPay Response] Status ${gopayRes.status}:`, resText);
+      console.log(`[GoPay Response] Status ${gopayRes.status} for ${order_no}:`, resText);
     } catch (fErr: any) {
-      console.warn("[GoPay Fast Timeout/Error] Remote payment gateway slow or unreachable:", fErr.message);
+      console.error(`[GoPay Error] Remote payment gateway failed for ${order_no}:`, fErr.message);
     }
 
     let redirectUrl = "";
@@ -4102,6 +4145,8 @@ app.all(["/gopay_pay.php", "/pay.php", "/gopay", "/propay_pay.php", "/api/gopay-
         console.warn("[GoPay Parse Non-JSON Response]:", resText);
       }
     }
+
+
 
     if (!redirectUrl) {
       // Instant fallback payment page URL to ensure <100ms loading speed
@@ -4299,9 +4344,27 @@ async function startServer() {
       }
     }
   };
+  const publicPath = path.join(process.cwd(), 'public');
+  if (fs.existsSync(publicPath)) {
+    app.use(express.static(publicPath, staticOptions));
+  }
   app.use(express.static(distPath, staticOptions));
   if (fs.existsSync(distBackupPath)) {
     app.use(express.static(distBackupPath, staticOptions));
+  }
+
+  if (process.env.NODE_ENV !== "production") {
+    try {
+      const { createServer: createViteServer } = await import("vite");
+      const vite = await createViteServer({
+        server: { middlewareMode: true },
+        appType: "custom",
+      });
+      app.use(vite.middlewares);
+      console.log("[Dev Server] Vite middleware successfully mounted");
+    } catch (e: any) {
+      console.warn("[Dev Server] Vite middleware notice:", e?.message);
+    }
   }
 
   // Fallback route for static assets

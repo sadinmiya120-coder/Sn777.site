@@ -8,7 +8,7 @@ const ptIcon = 'https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEiMs1C
 const ptProviderItem = `{title:"PT",image:"${ptIcon}",category:"স্লট",isHot:!1}`;
 
 const ptSlotGames = [
-  `{title:"PT Fortune",image:"${ptIcon}",category:"PT",isHot:!0}`,
+  `{title:"PT Fortune",image:"${ptIcon}",category:"PT",isHot:!1}`,
   `{title:"PT Deluxe",image:"${ptIcon}",category:"PT",isHot:!1}`
 ];
 

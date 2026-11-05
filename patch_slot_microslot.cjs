@@ -8,7 +8,7 @@ const microslotIcon = 'https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvX
 const microslotProviderItem = `{title:"MICROSLOT",image:"${microslotIcon}",category:"স্লট",isHot:!1}`;
 
 const microslotSlotGames = [
-  `{title:"Microslot Fortune",image:"${microslotIcon}",category:"MICROSLOT",isHot:!0}`,
+  `{title:"Microslot Fortune",image:"${microslotIcon}",category:"MICROSLOT",isHot:!1}`,
   `{title:"Microslot Deluxe",image:"${microslotIcon}",category:"MICROSLOT",isHot:!1}`
 ];
 

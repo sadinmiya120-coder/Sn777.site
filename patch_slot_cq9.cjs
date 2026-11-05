@@ -8,7 +8,7 @@ const cq9Icon = 'https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEgQoz
 const cq9ProviderItem = `{title:"CQ9",image:"${cq9Icon}",category:"স্লট",isHot:!1}`;
 
 const cq9SlotGames = [
-  `{title:"CQ9 Fortune",image:"${cq9Icon}",category:"CQ9",isHot:!0}`,
+  `{title:"CQ9 Fortune",image:"${cq9Icon}",category:"CQ9",isHot:!1}`,
   `{title:"CQ9 Deluxe",image:"${cq9Icon}",category:"CQ9",isHot:!1}`
 ];
 

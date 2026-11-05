@@ -8,7 +8,7 @@ const kmIcon = 'https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEg_oPx
 const kmProviderItem = `{title:"KM",image:"${kmIcon}",category:"স্লট",isHot:!1}`;
 
 const kmSlotGames = [
-  `{title:"Kingmaker Fortune",image:"${kmIcon}",category:"KM",isHot:!0}`,
+  `{title:"Kingmaker Fortune",image:"${kmIcon}",category:"KM",isHot:!1}`,
   `{title:"Kingmaker Deluxe",image:"${kmIcon}",category:"KM",isHot:!1}`
 ];
 

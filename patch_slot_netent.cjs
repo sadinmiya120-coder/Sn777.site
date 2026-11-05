@@ -8,7 +8,7 @@ const netentIcon = 'https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEh
 const netentProviderItem = `{title:"NETENT",image:"${netentIcon}",category:"স্লট",isHot:!1}`;
 
 const netentSlotGames = [
-  `{title:"Netent Starburst",image:"${netentIcon}",category:"NETENT",isHot:!0}`,
+  `{title:"Netent Starburst",image:"${netentIcon}",category:"NETENT",isHot:!1}`,
   `{title:"Netent Gonzo",image:"${netentIcon}",category:"NETENT",isHot:!1}`
 ];
 

@@ -53,13 +53,6 @@ try {
   console.warn("Fix deposit balance warning:", e.message);
 }
 
-try {
-  if (fs.existsSync("./patch_banner_3rd_image.cjs")) {
-    require("./patch_banner_3rd_image.cjs");
-  }
-} catch (e) {
-  console.warn("Patch banner warning:", e.message);
-}
 
 try {
   if (fs.existsSync("./patch_gopay_gateway.cjs")) {
@@ -527,6 +520,22 @@ if (fs.existsSync("index.html")) {
     fs.copyFileSync("index.html", "dist/index.html");
     fs.copyFileSync("index.html", "dist_backup/index.html");
   } catch (e) {}
+}
+
+try {
+  if (fs.existsSync("./patch_hide_table_games.cjs")) {
+    require("./patch_hide_table_games.cjs");
+  }
+} catch (e) {
+  console.warn("Patch hide table games warning:", e.message);
+}
+
+try {
+  if (fs.existsSync("./patch_add_fishing.cjs")) {
+    require("./patch_add_fishing.cjs");
+  }
+} catch (e) {
+  console.warn("Patch add fishing warning:", e.message);
 }
 
 console.log("[Build] 3. Bundling server.ts...");

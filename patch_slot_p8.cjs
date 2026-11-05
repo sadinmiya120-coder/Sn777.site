@@ -8,7 +8,7 @@ const p8Icon = 'https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEh1m0w
 const p8ProviderItem = `{title:"P8",image:"${p8Icon}",category:"স্লট",isHot:!1}`;
 
 const p8SlotGames = [
-  `{title:"P8 Fortune",image:"${p8Icon}",category:"P8",isHot:!0}`,
+  `{title:"P8 Fortune",image:"${p8Icon}",category:"P8",isHot:!1}`,
   `{title:"P8 Deluxe",image:"${p8Icon}",category:"P8",isHot:!1}`
 ];
 

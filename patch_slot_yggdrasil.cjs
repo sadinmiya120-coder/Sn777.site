@@ -8,7 +8,7 @@ const yggdrasilIcon = 'https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvX
 const yggdrasilProviderItem = `{title:"YGGDRASIL",image:"${yggdrasilIcon}",category:"স্লট",isHot:!1}`;
 
 const yggdrasilSlotGames = [
-  `{title:"Yggdrasil Fortune",image:"${yggdrasilIcon}",category:"YGGDRASIL",isHot:!0}`,
+  `{title:"Yggdrasil Fortune",image:"${yggdrasilIcon}",category:"YGGDRASIL",isHot:!1}`,
   `{title:"Yggdrasil Deluxe",image:"${yggdrasilIcon}",category:"YGGDRASIL",isHot:!1}`
 ];
 

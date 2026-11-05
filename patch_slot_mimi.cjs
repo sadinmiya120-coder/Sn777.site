@@ -8,7 +8,7 @@ const mimiIcon = 'https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEiOj
 const mimiProviderItem = `{title:"MIMI",image:"${mimiIcon}",category:"স্লট",isHot:!1}`;
 
 const mimiSlotGames = [
-  `{title:"Mimi Fortune",image:"${mimiIcon}",category:"MIMI",isHot:!0}`,
+  `{title:"Mimi Fortune",image:"${mimiIcon}",category:"MIMI",isHot:!1}`,
   `{title:"Mimi Deluxe",image:"${mimiIcon}",category:"MIMI",isHot:!1}`
 ];
 

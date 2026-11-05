@@ -25,7 +25,7 @@ if ($calculatedSign !== $receivedSign) {
     die("fail"); // Signature verification mismatch
 }
 
-if (isset($rawData['tradeResult']) && $rawData['tradeResult'] === '1') {
+if ($rawData['tradeResult'] === '1') {
     // Payment verified successfully. Trigger your internal order update logic.
     
     // Handshake Acknowledgment: Must output exactly success in lowercase

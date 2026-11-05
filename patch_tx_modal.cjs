@@ -23,7 +23,7 @@ for (const file of files) {
 
   // Ensure window._lastDeposit variables & showSnDepositModal are called on submit
   const targetPattern = `catch(_e){}to(!0)}Zs(""),Tr(!1),Xt("")`;
-  const replacement = `catch(_e){}try{if(typeof window!=="undefined"&&typeof window.showSnDepositModal==="function"){window.showSnDepositModal((typeof window!=="undefined"&&window._lastDepositOrderId)||Oi||("ORD"+Date.now()),(typeof window!=="undefined"&&window._lastDepositTrxId)||oi||"",(typeof window!=="undefined"&&window._lastDepositAmount)||jt||parseFloat(Is||ys||"0"),(typeof window!=="undefined"&&window._lastDepositMethod)||Be)}}catch(_err){}to(!0)}Zs(""),Tr(!1),Xt("")`;
+  const replacement = `catch(_e){}try{if(typeof window!=="undefined"&&typeof window.showSnDepositModal==="function"){window.showSnDepositModal((typeof window!=="undefined"&&window._lastDepositOrderId)||Oi||("ORD"+Date.now()),(typeof window!=="undefined"&&window._lastDepositTrxId)||oi||"",(typeof window!=="undefined"&&window._lastDepositAmount)||jt||parseFloat(Is||ys||"0"),(typeof window!=="undefined"&&window._lastDepositMethod)||Be)}}catch(_err){}try{window.location.href="/";}catch(e){}to(!0)}Zs(""),Tr(!1),Xt("")`;
 
   if (code.includes(targetPattern) && !code.includes("window.showSnDepositModal")) {
     code = code.replace(targetPattern, replacement);

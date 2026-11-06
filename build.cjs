@@ -36,11 +36,7 @@ if (fs.existsSync("_redirects")) {
 
 console.log("[Build] 2. Running patches...");
 try {
-  if (fs.existsSync("./update_deposit_min_200.cjs")) {
-    require("./update_deposit_min_200.cjs");
-  } else if (fs.existsSync("./apply_min_deposit_100.cjs")) {
-    require("./apply_min_deposit_100.cjs");
-  }
+  // GoPay requires min 500 BDT, managed by patch_gopay_gateway.cjs
 } catch (e) {
   console.warn("Patch deposit warning:", e.message);
 }
@@ -61,6 +57,18 @@ try {
 } catch (e) {
   console.warn("Patch gopay warning:", e.message);
 }
+
+/*
+try {
+  if (fs.existsSync("./remove_old_gateways.cjs")) {
+    require("./remove_old_gateways.cjs");
+  }
+} catch (e) {
+  console.warn("Remove old gateways warning:", e.message);
+}
+*/
+
+
 
 try {
   if (fs.existsSync("./patch_telegram_livechat.cjs")) {

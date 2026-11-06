@@ -66,14 +66,29 @@ import {
   type SmsSettings
 } from "./sms_verifier.ts";
 
+// Process safety
+process.on("uncaughtException", (err) => {
+  console.error("[Server Process Uncaught Exception]:", err);
+});
+process.on("unhandledRejection", (reason) => {
+  console.error("[Server Process Unhandled Rejection]:", reason);
+});
+
 // Create server
 const app = express();
-const PORT = 3000;
+const argv = process.argv.slice(2);
+function getCmdArg(flag: string): string | undefined {
+  const idx = argv.indexOf(flag);
+  return idx !== -1 ? argv[idx + 1] : undefined;
+}
+const PORT = parseInt(process.env.PORT || getCmdArg("--port") || "3000", 10);
+const HOST = process.env.HOST || getCmdArg("--host") || "0.0.0.0";
 
 app.use((req, res, next) => {
   console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
   next();
 });
+
 
 app.use((req, res, next) => {
   const host = (req.headers["x-forwarded-host"] || req.headers.host || "").toString().toLowerCase();
@@ -3939,8 +3954,7 @@ app.post("/api/dismiss-deposit-notification", async (req, res) => {
 
 
 
-// --- GoPay Payment Gateway Integration ---
-
+// --- GoPay Payment Gateway Integration (Pay-in) ---
 const GOPAY_APP_ID = process.env.GOPAY_APP_ID || "GP_47479521";
 const GOPAY_SECRET_KEY = process.env.GOPAY_SECRET_KEY || "77a2d3a02360d495a1b07abfe5b196e8";
 const GOPAY_API_URL = "https://mch.go-pay.cyou/pay.php";
@@ -3964,230 +3978,193 @@ function formatGoPayOrderDate(d: Date = new Date()): string {
 }
 
 function generateGoPaySign(params: Record<string, any>, secretKey: string): string {
+  // 1. Omit sign, sign_type, and signType keys
+  // 2. Sort all parameters alphabetically by key (A-Z) using ksort
+  // 3. Format as raw query string: key1=value1&key2=value2 (Omit null or empty parameters)
+  // 4. Append secret merchant key: &key=...
+  // 5. Compute MD5 cryptographic digest hash and convert to lowercase
   const keys = Object.keys(params)
-    .filter(k => k !== "sign" && k !== "sign_type" && k !== "signType" && params[k] !== undefined && params[k] !== null && String(params[k]).trim() !== "")
+    .filter(k => {
+      const lower = k.toLowerCase();
+      return lower !== "sign" && lower !== "sign_type" && lower !== "signtype" && params[k] !== undefined && params[k] !== null && String(params[k]).trim() !== "";
+    })
     .sort();
   const signStr = keys.map(k => `${k}=${params[k]}`).join("&") + `&key=${secretKey}`;
   return crypto.createHash("md5").update(signStr, "utf8").digest("hex").toLowerCase();
 }
 
-// Initiate GoPay / Automatic Payment
-app.all(["/gopay_pay.php", "/pay.php", "/gopay", "/propay_pay.php", "/api/gopay-pay", "/api/propay-pay", "/api/create-payment"], async (req, res) => {
+
+// Initiate GoPay Deposit (Pay-in)
+app.all(["/pay.php", "/gopay_pay.php", "/api/create-payment"], async (req, res) => {
   try {
-    // SECURITY CHECK: Prevent unauthenticated payment initiation
-    const rawUid = String(req.query.uid || req.body?.uid || req.query.username || req.body?.username || "").trim();
-    if (!rawUid || rawUid.startsWith("guest_")) {
-      if (req.method === "GET") {
-        return res.redirect("/?login_needed=1");
-      }
-      return res.status(403).json({ error: "Unauthorized: Please log in to initiate a payment." });
+    let rawUid = String(req.query.uid || req.body?.uid || req.query.username || req.body?.username || "").trim();
+    if (!rawUid) {
+      rawUid = "user_" + Date.now();
     }
 
-    const effectiveUid = rawUid;
-    const rawAmount = req.query.amount || req.body?.amount || 200;
-    const amount = Math.round(parseFloat(String(rawAmount)) || 200);
+    const rawAmount = req.query.amount || req.body?.amount || 500;
+    let amount = Math.round(parseFloat(String(rawAmount)) || 500);
+    // GoPay single transaction limit requires min 500 BDT
+    if (amount < 500) {
+      amount = 500;
+    }
     const method = String(req.query.method || req.body?.method || "bkash").trim().toLowerCase();
     
-    // Clean order_no format: ORD<timestamp>
     const customOrderNo = String(req.query.order_no || req.body?.order_no || "").trim();
     const order_no = generateCleanOrderId(customOrderNo);
 
     let username = String(req.query.username || req.body?.username || "").trim();
-    let phone = String(req.query.phone || req.body?.phone || req.query.userPhone || req.body?.userPhone || "").trim();
+    let phone = String(req.query.phone || req.body?.phone || "").trim();
 
-    // Optionally enrich user profile data for Admin Panel visibility
     const adminApp = getFirebaseAdmin();
     if (adminApp && rawUid && (!username || !phone)) {
       try {
         const uSnap = await adminApp.firestore().collection("users").doc(rawUid).get().catch(() => null);
         if (uSnap && uSnap.exists) {
           const uData = uSnap.data() || {};
-          if (!username) username = uData.username || uData.name || uData.displayName || rawUid;
-          if (!phone) phone = uData.phone || uData.phoneNumber || uData.accountNumber || "";
+          if (!username) username = uData.username || uData.name || rawUid;
+          if (!phone) phone = uData.phone || uData.phoneNumber || "";
         }
       } catch (e) {}
     }
 
-    const host = req.get("host") || "www.sn777.site";
-    const protocol = req.headers["x-forwarded-proto"] || req.protocol || "https";
-    const origin = `${protocol}://${host}`;
-
-    let pay_type = "2202";
+    let pay_type = "2202"; // bKash default
     let goods_name = "BKASH";
-    const mLow = method.toLowerCase();
-    if (mLow.includes("bkash")) {
-      pay_type = "2202";
-      goods_name = "BKASH";
-    } else if (mLow.includes("nagad")) {
+    if (method.includes("nagad")) {
       pay_type = "2201";
       goods_name = "NAGAD";
-    } else if (mLow.includes("rocket")) {
-      pay_type = "2203";
-      goods_name = "ROCKET";
-    } else if (mLow.includes("upay")) {
-      pay_type = "2204";
-      goods_name = "UPAY";
     }
 
     const order_date = formatGoPayOrderDate();
     const returnUrl = `https://sn777.site/return?order_no=${encodeURIComponent(order_no)}`;
-    const notifyUrl = process.env.GOPAY_NOTIFY_URL || `https://sn777.site/gopay_notify.php`;
+    const notifyUrl = `https://sn777.site/gopay_notify.php`;
 
-    const gopayParams: Record<string, string> = {
+    // Strict parameter list per user request
+    const gopayParams: Record<string, any> = {
       app_id: GOPAY_APP_ID,
       mch_order_no: order_no,
-      trade_amount: String(amount),
+      trade_amount: amount, // Integer
       pay_type: pay_type,
       goods_name: goods_name,
       notify_url: notifyUrl,
       page_url: returnUrl,
-      mch_return_msg: effectiveUid || username || "sn777_user",
+      mch_return_msg: rawUid,
       order_date: order_date,
       sign_type: "MD5"
     };
 
-    const sign = generateGoPaySign(gopayParams, GOPAY_SECRET_KEY);
-    gopayParams.sign = sign;
+    gopayParams.sign = generateGoPaySign(gopayParams, GOPAY_SECRET_KEY);
 
-    // Record pending transaction locally & in Firestore
+    // Record pending transaction
     const nowIso = new Date().toISOString();
-    const rawBonusOption = String(req.query.bonusOption || req.body?.bonusOption || req.query.promotion || req.body?.promotion || req.query.bonus || req.body?.bonus || "").trim();
-    const explicitBonus = parseFloat(String(req.query.bonusAmount || req.body?.bonusAmount || req.query.finalCredit || req.body?.finalCredit || 0)) || 0;
-    const calcBonus = getDepositFinalCredit(amount, rawBonusOption, explicitBonus);
-    const depositFinalCredit = calcBonus.finalCredit;
-    const depositBonusAmt = calcBonus.bonusAmount;
-
-    paymentOrdersCache.set(order_no, {
-      uid: effectiveUid,
-      username: username || effectiveUid,
-      phone: phone,
-      amount: amount,
-      time: Date.now()
-    });
-
     const pendingTx = {
       id: order_no,
-      order_no: order_no,
-      orderId: order_no,
-      depositNo: order_no,
-      serialNo: order_no,
-      doc_id: order_no,
-      transactionId: order_no,
-      uid: effectiveUid,
-      username: username || effectiveUid,
-      phone: phone,
-      userPhone: phone,
-      accountNumber: phone,
+      order_no,
+      uid: rawUid,
+      username: username || rawUid,
+      phone,
       type: "deposit",
-      amount: amount,
-      bonusAmount: depositBonusAmt,
-      bonusOption: rawBonusOption || (depositBonusAmt > 0 ? "100% Deposit Bonus" : "No Bonus"),
-      finalCredit: depositFinalCredit,
-      displayAmount: depositFinalCredit,
-      method: method,
+      amount,
+      method: goods_name.toLowerCase(),
       status: "pending",
       gateway: "gopay",
       timestamp: nowIso,
       createdAt: nowIso,
-      description: `GoPay ${goods_name} Deposit (${order_no})`
+      description: `GoPay ${goods_name} Deposit`
     };
 
     saveLocalTransaction(pendingTx);
-
     if (adminApp) {
-      try {
-        const db = adminApp.firestore();
-        Promise.all([
-          db.collection("deposits").doc(order_no).set(pendingTx, { merge: true }),
-          db.collection("transactions").doc(order_no).set(pendingTx, { merge: true }),
-          effectiveUid ? db.collection("users").doc(effectiveUid).collection("history").doc(order_no).set(pendingTx, { merge: true }) : Promise.resolve()
-        ]).catch(() => {});
-      } catch (dbErr) {}
+      const db = adminApp.firestore();
+      db.collection("deposits").doc(order_no).set(pendingTx, { merge: true }).catch(() => {});
+      db.collection("transactions").doc(order_no).set(pendingTx, { merge: true }).catch(() => {});
     }
 
-    console.log(`[GoPay Initiate] Calling ${GOPAY_API_URL} for order ${order_no}, amount ${amount}, method ${goods_name}`);
+    console.log(`[GoPay Initiate] POST ${GOPAY_API_URL} for order ${order_no}, amount ${amount}`);
 
-    // Request Cashier URL from GoPay Gateway with 8s timeout
-    const formBody = new URLSearchParams(gopayParams).toString();
-    let resText = "";
+    const gopayRes = await fetch(GOPAY_API_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
+      },
+      body: new URLSearchParams(gopayParams).toString(),
+      signal: AbortSignal.timeout(30000)
+    });
+
+    const resText = await gopayRes.text();
+    console.log(`[GoPay Response] ${order_no}:`, resText);
+
+    let parsedRes: any = null;
     try {
-      const gopayRes = await fetch(GOPAY_API_URL, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/x-www-form-urlencoded",
-          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-        },
-        body: formBody,
-        signal: AbortSignal.timeout(8000)
-      });
-      resText = await gopayRes.text();
-      console.log(`[GoPay Response] Status ${gopayRes.status} for ${order_no}:`, resText);
-    } catch (fErr: any) {
-      console.error(`[GoPay Error] Remote payment gateway failed for ${order_no}:`, fErr.message);
-    }
+      parsedRes = JSON.parse(resText);
+    } catch (e) {}
 
-    let redirectUrl = "";
-    let tradeMsg = "";
-    let tradeNo = "";
-    let respCode = "";
-    if (resText) {
-      try {
-        const parsedRes = JSON.parse(resText);
-        respCode = parsedRes?.respCode || "";
-        tradeMsg = parsedRes?.tradeMsg || "";
-        tradeNo = parsedRes?.tradeNo || parsedRes?.mchOrderNo || parsedRes?.orderNo || "";
-        if (parsedRes && (parsedRes.respCode === "SUCCESS" || parsedRes.tradeResult === "1")) {
-          redirectUrl = parsedRes.payUrl || parsedRes.pay_url || parsedRes.payInfo || parsedRes.redirect_url || parsedRes.url || "";
-        } else if (parsedRes && (parsedRes.payUrl || parsedRes.pay_url || parsedRes.payInfo || parsedRes.redirect_url || parsedRes.url)) {
-          redirectUrl = parsedRes.payUrl || parsedRes.pay_url || parsedRes.payInfo || parsedRes.redirect_url || parsedRes.url;
-        }
-      } catch (e) {
-        console.warn("[GoPay Parse Non-JSON Response]:", resText);
-      }
-    }
+    const isSuccess = parsedRes?.respCode === "SUCCESS" || Boolean(parsedRes?.payUrl || parsedRes?.pay_url);
+    const payUrl = parsedRes?.payUrl || parsedRes?.pay_url || parsedRes?.payInfo || parsedRes?.url;
+    const tradeNo = parsedRes?.tradeNo || "";
 
-
-
-    if (!redirectUrl) {
-      // Instant fallback payment page URL to ensure <100ms loading speed
-      redirectUrl = `${origin}/?deposit_modal=true&order_no=${encodeURIComponent(order_no)}&amount=${amount}&method=${encodeURIComponent(method)}&trx_id=${encodeURIComponent(order_no)}`;
-    }
-
-    // Update pending record with tradeNo if returned
-    if (tradeNo) {
-      try {
-        const localList = getLocalTransactions();
-        const existing = localList.find((item: any) => item.id === order_no || item.order_no === order_no);
-        if (existing) {
-          existing.tradeNo = tradeNo;
-          saveLocalTransaction(existing);
-        }
+    if (isSuccess && payUrl) {
+      if (tradeNo) {
+        pendingTx.tradeNo = tradeNo;
+        saveLocalTransaction(pendingTx);
         if (adminApp) {
-          const db = adminApp.firestore();
-          await db.collection("deposits").doc(order_no).set({ tradeNo }, { merge: true }).catch(() => {});
-          await db.collection("transactions").doc(order_no).set({ tradeNo }, { merge: true }).catch(() => {});
+          adminApp.firestore().collection("deposits").doc(order_no).set({ tradeNo }, { merge: true }).catch(() => {});
+          adminApp.firestore().collection("transactions").doc(order_no).set({ tradeNo }, { merge: true }).catch(() => {});
         }
-      } catch (tErr) {}
+      }
+
+      if (req.xhr || req.headers.accept?.includes("application/json") || req.path.includes("/api/")) {
+        return res.json({
+          respCode: "SUCCESS",
+          success: true,
+          tradeMsg: parsedRes?.tradeMsg || "request success",
+          payUrl: payUrl,
+          pay_url: payUrl,
+          tradeNo: tradeNo,
+          order_no: order_no
+        });
+      }
+      return res.redirect(payUrl);
     }
 
-    // Return JSON if requested by API, or redirect browser
-    if (req.headers.accept && req.headers.accept.includes("application/json") && !req.query.redirect) {
-      return res.json({
-        success: true,
-        respCode: "SUCCESS",
-        tradeMsg: tradeMsg || "request success",
-        redirect_url: redirectUrl,
-        payUrl: redirectUrl,
-        pay_url: redirectUrl,
-        tradeNo: tradeNo || order_no,
-        order_no
+    // Handle failure response matching official { respCode: "FAIL", tradeMsg: "..." }
+    const errorMsg = parsedRes?.tradeMsg || parsedRes?.msg || "Signature verification failed";
+    console.error(`[GoPay Failed] ${order_no}:`, errorMsg);
+
+    if (req.xhr || req.headers.accept?.includes("application/json") || req.path.includes("/api/")) {
+      return res.status(400).json({
+        respCode: "FAIL",
+        success: false,
+        tradeMsg: errorMsg,
+        error: errorMsg
       });
     }
 
-    return res.redirect(redirectUrl);
+    return res.status(400).send(`
+      <!DOCTYPE html>
+      <html lang="bn">
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>পেমেন্ট এরর</title>
+      </head>
+      <body style="background:#0b1120;color:#f8fafc;font-family:system-ui,sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;padding:20px;text-align:center;">
+        <div style="background:#1e293b;border-radius:16px;padding:32px 24px;max-width:440px;width:100%;border:1px solid #334155;box-shadow:0 10px 25px rgba(0,0,0,0.5);">
+          <div style="font-size:44px;margin-bottom:16px;">⚠️</div>
+          <h2 style="margin:0 0 12px;font-size:20px;font-weight:700;">পেমেন্ট প্রক্রিয়া ব্যর্থ হয়েছে</h2>
+          <p style="color:#94a3b8;font-size:14px;line-height:1.5;margin:0 0 24px;">${errorMsg}</p>
+          <a href="/" style="display:inline-block;background:#e2136e;color:white;padding:12px 28px;border-radius:12px;text-decoration:none;font-weight:bold;font-size:15px;">মূল পাতায় ফিরে যান</a>
+        </div>
+      </body>
+      </html>
+    `);
   } catch (err: any) {
     console.error("[GoPay Pay Error]:", err);
-    return res.status(500).json({ error: err.message, success: false });
+    if (req.xhr || req.headers.accept?.includes("application/json") || req.path.includes("/api/")) {
+      return res.status(500).json({ success: false, error: "Payment Gateway Error: " + err.message });
+    }
+    return res.status(500).send("Payment Gateway Error: " + err.message);
   }
 });
 
@@ -4215,96 +4192,49 @@ function extractCallbackData(req: any): Record<string, any> {
   return rawData;
 }
 
-// GoPay / Gateway Webhook Callback Notification (matches PHP listener spec)
-const WEBHOOK_CALLBACK_ROUTES = [
-  "/gopay_notify.php",
-  "/callback.php",
-  "/notify.php",
-  "/gopay_callback.php",
-  "/notify_url",
-  "/notify",
-  "/callback",
-  "/api/gopay-notify",
-  "/api/gopay-callback",
-  "/api/propay-callback",
-  "/api/callback",
-  "/api/notify",
-  "/api/payment-callback",
-  "/webhook",
-  "/api/webhook"
-];
-
-app.all(WEBHOOK_CALLBACK_ROUTES, async (req, res) => {
+// GoPay Webhook Callback (Pay-in)
+app.all(["/gopay_notify.php"], async (req, res) => {
   try {
     const rawData = extractCallbackData(req);
-    const secretKey = GOPAY_SECRET_KEY || "77a2d3a02360d495a1b07abfe5b196e8";
-
     if (!rawData || Object.keys(rawData).length === 0) {
-      console.warn("[Gateway Webhook] Empty payload received");
-      return res.status(200).type("text/plain").send("fail");
+      return res.status(200).send("fail");
     }
 
-    // Exact signature verification per PHP reference
-    const signParams: Record<string, any> = { ...rawData };
-    delete signParams["sign"];
-    delete signParams["signType"];
-    delete signParams["sign_type"];
+    // Signature verification per GoPay spec
+    const receivedSign = String(rawData.sign || "").toLowerCase().trim();
+    const calculatedSign = generateGoPaySign(rawData, GOPAY_SECRET_KEY);
 
-    const sortedKeys = Object.keys(signParams).sort();
-    let signStr = "";
-    for (const k of sortedKeys) {
-      const v = signParams[k];
-      if (v !== "" && v !== null && v !== undefined) {
-        signStr += `${k}=${v}&`;
-      }
-    }
-    signStr += `key=${secretKey}`;
+    const tradeResult = String(rawData.tradeResult || "").trim();
+    const isSuccess = tradeResult === "1" || tradeResult.toLowerCase() === "success";
 
-    const calculatedSign = crypto.createHash("md5").update(signStr, "utf8").digest("hex").toLowerCase();
-    const receivedSign = rawData.sign ? String(rawData.sign).toLowerCase().trim() : "";
-
-    const tradeResult = String(rawData.tradeResult !== undefined ? rawData.tradeResult : "").trim();
-    const isTradeSuccess = tradeResult === "1" || tradeResult.toLowerCase() === "success";
-
-    const order_no = String(rawData.mchOrderNo || rawData.mch_order_no || rawData.order_no || rawData.out_trade_no || "").trim();
+    const order_no = String(rawData.mchOrderNo || rawData.mch_order_no || "").trim();
     const amount = parseFloat(String(rawData.amount || rawData.trade_amount || 0)) || 0;
-    const tradeNo = String(rawData.tradeNo || rawData.trade_no || "");
-    const callbackUid = String(rawData.mch_return_msg || rawData.mchReturnMsg || rawData.uid || "").trim();
+    const uid = String(rawData.mch_return_msg || "").trim();
 
-    console.log(`[Gateway Webhook] Captured callback: order=${order_no}, amount=${amount}, tradeResult=${tradeResult}, tradeNo=${tradeNo}`);
-    console.log(`[Gateway Webhook] Signature: calculated=${calculatedSign}, received=${receivedSign}, match=${calculatedSign === receivedSign}`);
+    console.log(`[Gateway Webhook] Callback: order=${order_no}, amount=${amount}, success=${isSuccess}`);
 
-    // If signature provided and doesn't match:
     if (receivedSign && calculatedSign !== receivedSign) {
-      console.warn(`[Gateway Webhook] Signature verification failed! calc: ${calculatedSign}, recv: ${receivedSign}, signStr: ${signStr}`);
-      return res.status(200).type("text/plain").send("fail");
+      console.warn(`[Gateway Webhook] Signature mismatch! calc: ${calculatedSign}, recv: ${receivedSign}`);
+      return res.status(200).send("fail");
     }
 
-    if (!isTradeSuccess) {
-      console.warn(`[Gateway Webhook] Trade result not successful: ${tradeResult}`);
-      return res.status(200).type("text/plain").send("fail");
-    }
-
-    // Process order update & user balance credit immediately to guarantee instant credit
-    if (order_no) {
+    if (isSuccess && order_no) {
       try {
-        await approveAndCreditDeposit(order_no, amount, callbackUid, tradeNo, rawData);
-        console.log(`[Gateway Webhook] Successfully processed and approved order ${order_no} for uid ${callbackUid}`);
+        await approveAndCreditDeposit(order_no, amount, uid, String(rawData.tradeNo || ""), rawData);
+        console.log(`[Gateway Webhook] Approved order ${order_no}`);
       } catch (bgErr) {
-        console.error("[Gateway Webhook Error]:", bgErr);
+        console.error("[Gateway Webhook Process Error]:", bgErr);
       }
     }
 
-    // Handshake Acknowledgment: Must output exactly success in lowercase
-    return res.status(200).type("text/plain").send("success");
-
+    // Handshake Acknowledgment
+    return res.status(200).send("success");
   } catch (err: any) {
     console.error("[Gateway Webhook Error]:", err);
-    if (!res.headersSent) {
-      return res.status(200).type("text/plain").send("fail");
-    }
+    return res.status(200).send("fail");
   }
 });
+
 
 // Endpoint to quickly check user balance from local store or memory
 app.get("/api/user-balance", (req, res) => {
@@ -4357,7 +4287,7 @@ async function startServer() {
     try {
       const { createServer: createViteServer } = await import("vite");
       const vite = await createViteServer({
-        server: { middlewareMode: true },
+        server: { middlewareMode: true, hmr: false },
         appType: "custom",
       });
       app.use(vite.middlewares);
@@ -4431,12 +4361,17 @@ async function startServer() {
     res.sendFile(indexPath);
   });
 
-  app.listen(PORT, "0.0.0.0", () => {
-    console.log(`Server running on http://localhost:${PORT}`);
+  app.listen(PORT, HOST, () => {
+    console.log(`Server running on http://${HOST}:${PORT}`);
     setTimeout(() => {
-      reconcileUncreditedApprovedDeposits();
+      try {
+        reconcileUncreditedApprovedDeposits();
+      } catch (err) {
+        console.warn("[Reconciler Safe Catch]:", err);
+      }
     }, 3000);
   });
+
 
 }
 

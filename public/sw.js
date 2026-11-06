@@ -1,4 +1,4 @@
-const CACHE_NAME = "sn777-v56";
+const CACHE_NAME = "sn777-v23";
 const ASSETS = ["/", "/index.html", "/manifest.json"];
 
 self.addEventListener("install", (event) => {

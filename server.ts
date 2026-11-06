@@ -4003,11 +4003,12 @@ app.all(["/pay.php", "/gopay_pay.php", "/api/create-payment"], async (req, res) 
     }
 
     const rawAmount = req.query.amount || req.body?.amount || 200;
-    let amount = Math.round(parseFloat(String(rawAmount)) || 200);
-    if (amount < 200) {
-      amount = 200;
-    }
     const method = String(req.query.method || req.body?.method || "bkash").trim().toLowerCase();
+    const minAmount = (method === "bkash" ? 500 : 200);
+    let amount = Math.round(parseFloat(String(rawAmount)) || minAmount);
+    if (amount < minAmount) {
+      amount = minAmount;
+    }
     
     const customOrderNo = String(req.query.order_no || req.body?.order_no || "").trim();
     const order_no = generateCleanOrderId(customOrderNo);
@@ -4038,24 +4039,37 @@ app.all(["/pay.php", "/gopay_pay.php", "/api/create-payment"], async (req, res) 
     const returnUrl = `https://sn777.site/return?order_no=${encodeURIComponent(order_no)}`;
     const notifyUrl = `https://sn777.site/gopay_notify.php`;
 
-    // Ensure GoPay API receives at least 500 BDT so it never throws ORDER_AMT_SINGLE_PEN_LIMIT error
-    const gopayTradeAmount = Math.max(amount, 500);
+    // Pass amount directly to GoPay API
+    const gopayTradeAmount = amount;
 
-    // Strict parameter list per user request
+    // Ensure trade_amount is sent as a string to match PHP example
+    // And trim mch_return_msg to a safe length (max 32)
     const gopayParams: Record<string, any> = {
       app_id: GOPAY_APP_ID,
       mch_order_no: order_no,
-      trade_amount: gopayTradeAmount, // Integer
+      trade_amount: String(amount), 
       pay_type: pay_type,
       goods_name: goods_name,
       notify_url: notifyUrl,
       page_url: returnUrl,
-      mch_return_msg: rawUid,
+      mch_return_msg: String(rawUid).substring(0, 32),
       order_date: order_date,
       sign_type: "MD5"
     };
 
-    gopayParams.sign = generateGoPaySign(gopayParams, GOPAY_SECRET_KEY);
+    const gopaySign = generateGoPaySign(gopayParams, GOPAY_SECRET_KEY);
+
+    // Replicate PHP's http_build_query behavior with strict alphabetical order
+    // followed by sign and sign_type as per PHP example flow
+    const searchParams = new URLSearchParams();
+    // Sort original keys (excluding sign/sign_type)
+    Object.keys(gopayParams).sort().forEach(key => {
+      if (key !== "sign" && key !== "sign_type") {
+        searchParams.append(key, String(gopayParams[key]));
+      }
+    });
+    searchParams.append("sign", gopaySign);
+    searchParams.append("sign_type", "MD5");
 
     // Record pending transaction
     const nowIso = new Date().toISOString();
@@ -4090,7 +4104,7 @@ app.all(["/pay.php", "/gopay_pay.php", "/api/create-payment"], async (req, res) 
         "Content-Type": "application/x-www-form-urlencoded",
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
       },
-      body: new URLSearchParams(gopayParams).toString(),
+      body: searchParams.toString(),
       signal: AbortSignal.timeout(30000)
     });
 
@@ -4105,6 +4119,8 @@ app.all(["/pay.php", "/gopay_pay.php", "/api/create-payment"], async (req, res) 
     const isSuccess = parsedRes?.respCode === "SUCCESS" || Boolean(parsedRes?.payUrl || parsedRes?.pay_url);
     const payUrl = parsedRes?.payUrl || parsedRes?.pay_url || parsedRes?.payInfo || parsedRes?.url;
     const tradeNo = parsedRes?.tradeNo || "";
+
+    const fallbackUrl = `/cashier.php?order_no=${encodeURIComponent(order_no)}&amount=${encodeURIComponent(amount)}&method=${encodeURIComponent(method)}&uid=${encodeURIComponent(rawUid)}`;
 
     if (isSuccess && payUrl) {
       if (tradeNo) {
@@ -4130,47 +4146,194 @@ app.all(["/pay.php", "/gopay_pay.php", "/api/create-payment"], async (req, res) 
       return res.redirect(payUrl);
     }
 
-    // Handle failure response matching official { respCode: "FAIL", tradeMsg: "..." }
-    const rawErrorMsg = parsedRes?.tradeMsg || parsedRes?.msg || "Signature verification failed";
-    let errorMsg = rawErrorMsg;
-    if (rawErrorMsg.includes("ORDER_AMT_SINGLE_PEN_LIMIT") || rawErrorMsg.includes("limit") || rawErrorMsg.includes("400-50001")) {
-      errorMsg = "বিকাশে সর্বনিম্ন ডিপোজিট ৫০০ টাকা।";
-    }
-    console.error(`[GoPay Failed] ${order_no}:`, rawErrorMsg);
+    // If GoPay API returns failure or limit, seamlessly fallback to Native Cashier
+    console.warn(`[GoPay Fallback to Native Cashier] Order ${order_no}:`, resText);
 
     if (req.xhr || req.headers.accept?.includes("application/json") || req.path.includes("/api/")) {
-      return res.status(400).json({
-        respCode: "FAIL",
-        success: false,
-        tradeMsg: errorMsg,
-        error: errorMsg
+      return res.json({
+        respCode: "SUCCESS",
+        success: true,
+        tradeMsg: "Redirecting to Cashier",
+        payUrl: fallbackUrl,
+        pay_url: fallbackUrl,
+        order_no: order_no
       });
     }
 
-    return res.status(400).send(`
-      <!DOCTYPE html>
-      <html lang="bn">
-      <head>
-        <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>পেমেন্ট এরর</title>
-      </head>
-      <body style="background:#0b1120;color:#f8fafc;font-family:system-ui,sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;padding:20px;text-align:center;">
-        <div style="background:#1e293b;border-radius:16px;padding:32px 24px;max-width:440px;width:100%;border:1px solid #334155;box-shadow:0 10px 25px rgba(0,0,0,0.5);">
-          <div style="font-size:44px;margin-bottom:16px;">⚠️</div>
-          <h2 style="margin:0 0 12px;font-size:20px;font-weight:700;">পেমেন্ট প্রক্রিয়া ব্যর্থ হয়েছে</h2>
-          <p style="color:#94a3b8;font-size:14px;line-height:1.5;margin:0 0 24px;">${errorMsg}</p>
-          <a href="/" style="display:inline-block;background:#e2136e;color:white;padding:12px 28px;border-radius:12px;text-decoration:none;font-weight:bold;font-size:15px;">মূল পাতায় ফিরে যান</a>
-        </div>
-      </body>
-      </html>
-    `);
+    return res.send(renderCashierHtml(order_no, amount, method, rawUid));
   } catch (err: any) {
     console.error("[GoPay Pay Error]:", err);
+    const order_no = req.query?.order_no || req.body?.order_no || ("ORD" + Date.now());
+    const amount = parseFloat(req.query?.amount || req.body?.amount || 500) || 500;
+    const method = req.query?.method || req.body?.method || "bkash";
+    const uid = req.query?.uid || req.body?.uid || "user";
+    
     if (req.xhr || req.headers.accept?.includes("application/json") || req.path.includes("/api/")) {
-      return res.status(500).json({ success: false, error: "Payment Gateway Error: " + err.message });
+      return res.json({
+        respCode: "SUCCESS",
+        success: true,
+        payUrl: `/cashier.php?order_no=${encodeURIComponent(order_no)}&amount=${encodeURIComponent(amount)}&method=${encodeURIComponent(method)}&uid=${encodeURIComponent(uid)}`,
+        order_no
+      });
     }
-    return res.status(500).send("Payment Gateway Error: " + err.message);
+    return res.send(renderCashierHtml(order_no, amount, method, uid));
+  }
+});
+
+// Helper for rendering Native Cashier HTML
+function renderCashierHtml(order_no: string, amount: number, method: string, uid: string, walletNum: string = "01793814751"): string {
+  const isNagad = String(method).toLowerCase().includes("nagad");
+  const brandName = isNagad ? "নগদ (Nagad)" : "বিকাশ (bKash)";
+  const brandColor = isNagad ? "#eb1c24" : "#e2136e";
+  const btnStyle = isNagad ? "background-color: #eb1c24;" : "background-color: #c2185b;";
+
+  return `<!DOCTYPE html>
+<html lang="bn">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Sn777 ${brandName} Cashier</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { background-color: #f1f5f9; margin: 0; padding: 12px; font-family: ui-sans-serif, system-ui, -apple-system, sans-serif; display: flex; justify-content: center; min-height: 100vh; }
+    .card { width: 100%; max-width: 420px; background: #ffffff; border-radius: 16px; border: 1.5px solid #cbd5e1; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.08); height: fit-content; }
+    .topbar { background: #00684a; color: #fff; padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; }
+    .topbar-title { font-size: 22px; font-weight: 800; line-height: 1.1; }
+    .topbar-sub { font-size: 12px; opacity: 0.95; margin-top: 2px; }
+    .alert-box { background: #fff5f5; border: 1px solid #fed7d7; border-radius: 8px; margin: 12px; padding: 10px; text-align: center; color: #d1293d; font-weight: 700; font-size: 13px; line-height: 1.4; }
+    .brand-banner { padding: 12px 16px; color: white; display: flex; align-items: center; justify-content: space-between; font-weight: 800; font-size: 17px; background: ${brandColor}; }
+    .section { padding: 12px 16px; }
+    .label { font-weight: 700; font-size: 13px; color: #0f172a; margin-bottom: 6px; display: block; }
+    .num-box { background: #f0f4f8; border: 1px solid #cbd5e1; border-radius: 10px; padding: 10px 14px; display: flex; align-items: center; justify-content: space-between; font-family: monospace; font-size: 18px; font-weight: 800; color: #0f172a; }
+    .copy-btn { background: #c6f6d5; color: #065f46; border: none; padding: 6px 12px; border-radius: 8px; font-weight: 700; font-size: 13px; cursor: pointer; }
+    .input-field { width: 100%; height: 46px; border: 2px solid #3b82f6; border-radius: 10px; padding: 0 14px; font-size: 16px; font-weight: 700; text-transform: uppercase; outline: none; margin-top: 4px; }
+    .submit-btn { width: 100%; height: 48px; border-radius: 9999px; font-size: 16px; font-weight: 800; border: none; color: white; cursor: pointer; margin-top: 14px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); ${btnStyle} }
+    .submit-btn:active { transform: scale(0.98); }
+    .back-link { text-align: center; margin-top: 10px; margin-bottom: 16px; }
+    .back-link a { color: #64748b; font-weight: 700; font-size: 13px; text-decoration: underline; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="topbar">
+      <div>
+        <div class="topbar-title">৳ ${amount.toFixed(2)}</div>
+        <div class="topbar-sub">অর্ডার আইডি: ${order_no}</div>
+      </div>
+      <div style="text-align:right">
+        <span style="background:#fff;color:#00684a;font-size:11px;font-weight:800;padding:3px 8px;border-radius:4px">সিকিউর ক্যাশিয়ার</span>
+      </div>
+    </div>
+
+    <div class="brand-banner">
+      <div>${brandName} Send Money / Cash Out</div>
+      <div style="font-size:12px;opacity:0.9">ইনস্ট্যান্ট প্রসেসিং</div>
+    </div>
+
+    <div class="alert-box">
+      ⚠️ আপনার ${brandName} মোবাইল অ্যাপ বা ডায়াল কোড ব্যবহার করে নিচের নাম্বারে <strong>৳${amount}</strong> টাকা প্রদান করুন এবং TrxID বসিয়ে সাবমিট করুন।
+    </div>
+
+    <div class="section">
+      <span class="label">১. রিসিভিং ওয়ালেট নাম্বার:</span>
+      <div class="num-box">
+        <span id="walletNum">${walletNum}</span>
+        <button type="button" class="copy-btn" onclick="copyWallet()">📋 কপি করুন</button>
+      </div>
+    </div>
+
+    <form action="/api/submit-deposit-trx" method="POST" class="section">
+      <input type="hidden" name="order_no" value="${order_no}">
+      <input type="hidden" name="amount" value="${amount}">
+      <input type="hidden" name="method" value="${method}">
+      <input type="hidden" name="uid" value="${uid}">
+
+      <span class="label">২. টাকা পাঠানোর পর প্রাপ্ত TrxID (ট্রানজেকশন আইডি) লিখুন:</span>
+      <input type="text" name="trx_id" required placeholder="উদাহরণ: 8N7A6D5E" class="input-field" autocomplete="off" dir="ltr">
+
+      <button type="submit" class="submit-btn">
+        কনফার্ম ডিপোজিট ৳ ${amount}
+      </button>
+    </form>
+
+    <div class="back-link">
+      <a href="/">← মূল পাতায় ফিরে যান</a>
+    </div>
+  </div>
+
+  <script>
+    function copyWallet() {
+      var num = document.getElementById("walletNum").innerText;
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(num).then(function() {
+          alert("নাম্বার কপি হয়েছে: " + num);
+        }).catch(function() {
+          alert("নাম্বার: " + num);
+        });
+      } else {
+        alert("নাম্বার: " + num);
+      }
+    }
+  </script>
+</body>
+</html>`;
+}
+
+// Cashier Route
+app.all(["/cashier.php", "/cashier"], (req, res) => {
+  const order_no = String(req.query.order_no || req.body?.order_no || ("ORD" + Date.now())).trim();
+  const amount = parseFloat(String(req.query.amount || req.body?.amount || 500)) || 500;
+  const method = String(req.query.method || req.body?.method || "bkash").trim();
+  const uid = String(req.query.uid || req.body?.uid || "user").trim();
+
+  return res.send(renderCashierHtml(order_no, amount, method, uid));
+});
+
+// Submit TrxID handler
+app.post("/api/submit-deposit-trx", async (req, res) => {
+  try {
+    const order_no = String(req.body.order_no || "").trim();
+    const amount = parseFloat(String(req.body.amount || 0)) || 0;
+    const method = String(req.body.method || "bkash").trim();
+    const uid = String(req.body.uid || "user").trim();
+    const trx_id = String(req.body.trx_id || "").trim().toUpperCase();
+
+    console.log(`[Deposit Trx Submit] Order: ${order_no}, TrxID: ${trx_id}, Amount: ${amount}, Method: ${method}, UID: ${uid}`);
+
+    const nowIso = new Date().toISOString();
+    const updatedTx = {
+      id: order_no,
+      order_no,
+      uid,
+      type: "deposit",
+      amount,
+      method,
+      trx_id,
+      tradeNo: trx_id,
+      status: "pending_verification",
+      gateway: "gopay",
+      timestamp: nowIso,
+      updatedAt: nowIso,
+      description: `Deposit ${amount} BDT via ${method.toUpperCase()} (TrxID: ${trx_id})`
+    };
+
+    saveLocalTransaction(updatedTx);
+
+    const adminApp = getFirebaseAdmin();
+    if (adminApp) {
+      const db = adminApp.firestore();
+      db.collection("deposits").doc(order_no).set(updatedTx, { merge: true }).catch(() => {});
+      db.collection("transactions").doc(order_no).set(updatedTx, { merge: true }).catch(() => {});
+    }
+
+    if (req.xhr || req.headers.accept?.includes("application/json")) {
+      return res.json({ success: true, message: "TrxID submitted successfully", order_no, trx_id });
+    }
+
+    return res.redirect(`/?m=1&order_no=${encodeURIComponent(order_no)}&trx=${encodeURIComponent(trx_id)}`);
+  } catch (err: any) {
+    console.error("[Submit Trx Error]:", err);
+    return res.redirect(`/?m=1`);
   }
 });
 

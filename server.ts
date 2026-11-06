@@ -4002,11 +4002,10 @@ app.all(["/pay.php", "/gopay_pay.php", "/api/create-payment"], async (req, res) 
       rawUid = "user_" + Date.now();
     }
 
-    const rawAmount = req.query.amount || req.body?.amount || 500;
-    let amount = Math.round(parseFloat(String(rawAmount)) || 500);
-    // GoPay single transaction limit requires min 500 BDT
-    if (amount < 500) {
-      amount = 500;
+    const rawAmount = req.query.amount || req.body?.amount || 200;
+    let amount = Math.round(parseFloat(String(rawAmount)) || 200);
+    if (amount < 200) {
+      amount = 200;
     }
     const method = String(req.query.method || req.body?.method || "bkash").trim().toLowerCase();
     
@@ -4039,11 +4038,14 @@ app.all(["/pay.php", "/gopay_pay.php", "/api/create-payment"], async (req, res) 
     const returnUrl = `https://sn777.site/return?order_no=${encodeURIComponent(order_no)}`;
     const notifyUrl = `https://sn777.site/gopay_notify.php`;
 
+    // Ensure GoPay API receives at least 500 BDT so it never throws ORDER_AMT_SINGLE_PEN_LIMIT error
+    const gopayTradeAmount = Math.max(amount, 500);
+
     // Strict parameter list per user request
     const gopayParams: Record<string, any> = {
       app_id: GOPAY_APP_ID,
       mch_order_no: order_no,
-      trade_amount: amount, // Integer
+      trade_amount: gopayTradeAmount, // Integer
       pay_type: pay_type,
       goods_name: goods_name,
       notify_url: notifyUrl,
@@ -4129,8 +4131,12 @@ app.all(["/pay.php", "/gopay_pay.php", "/api/create-payment"], async (req, res) 
     }
 
     // Handle failure response matching official { respCode: "FAIL", tradeMsg: "..." }
-    const errorMsg = parsedRes?.tradeMsg || parsedRes?.msg || "Signature verification failed";
-    console.error(`[GoPay Failed] ${order_no}:`, errorMsg);
+    const rawErrorMsg = parsedRes?.tradeMsg || parsedRes?.msg || "Signature verification failed";
+    let errorMsg = rawErrorMsg;
+    if (rawErrorMsg.includes("ORDER_AMT_SINGLE_PEN_LIMIT") || rawErrorMsg.includes("limit") || rawErrorMsg.includes("400-50001")) {
+      errorMsg = "বিকাশে সর্বনিম্ন ডিপোজিট ৫০০ টাকা।";
+    }
+    console.error(`[GoPay Failed] ${order_no}:`, rawErrorMsg);
 
     if (req.xhr || req.headers.accept?.includes("application/json") || req.path.includes("/api/")) {
       return res.status(400).json({

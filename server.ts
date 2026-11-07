@@ -2412,46 +2412,57 @@ async function approveAndCreditDeposit(orderNoInput: string, paidAmountOverride?
 
   if (!alreadyCreditedToRealUser && amount > 0 && candidateUid && !isGenericUid(candidateUid)) {
     try {
-      // 1. Update local store & in-memory trackers immediately for instant credit
-      const curLocalBal = getLocalUserBalance(candidateUid);
-      const newBal = (curLocalBal + amount).toFixed(2);
-      updatedBalance = newBal;
-      updateLocalUserBalance(candidateUid, newBal, amount);
-      if (candidateUsername && candidateUsername !== candidateUid && !isGenericUid(candidateUsername)) {
-        updateLocalUserBalance(candidateUsername, newBal, amount);
-      }
-      console.log(`[approveAndCreditDeposit] Successfully credited ৳${amount} to local user ${candidateUid}. New balance: ৳${newBal}`);
+      // 1. Fetch current live Firestore user data from BOTH databases first
+      let uDataDefault: any = null;
+      let uDataCustom: any = null;
 
-      // 2. Fetch current Firestore user data (via defaultDb, custom db, or REST)
-      let uData: any = null;
-      if (defaultDb) {
+      try {
+        uDataDefault = await firestoreRestGet("users", candidateUid, "(default)");
+      } catch (e) {}
+      try {
+        uDataCustom = await firestoreRestGet("users", candidateUid, FS_DB_ID);
+      } catch (e) {}
+
+      if (!uDataDefault && defaultDb) {
         try {
           const snap = await Promise.race([
             defaultDb.collection("users").doc(candidateUid).get(),
             new Promise((_, r) => setTimeout(() => r(new Error("timeout")), 1500))
           ]).catch(() => null);
-          if (snap && snap.exists) uData = snap.data();
+          if (snap && snap.exists) uDataDefault = snap.data();
         } catch (e) {}
       }
-      if (!uData && db) {
+      if (!uDataCustom && db) {
         try {
           const snap = await Promise.race([
             db.collection("users").doc(candidateUid).get(),
             new Promise((_, r) => setTimeout(() => r(new Error("timeout")), 1500))
           ]).catch(() => null);
-          if (snap && snap.exists) uData = snap.data();
+          if (snap && snap.exists) uDataCustom = snap.data();
         } catch (e) {}
       }
-      if (!uData) {
-        uData = await firestoreRestGet("users", candidateUid, "(default)");
-      }
-      if (!uData) {
-        uData = await firestoreRestGet("users", candidateUid, FS_DB_ID);
-      }
 
-      const curFsBal = uData ? (parseFloat(String(uData.balance || "0").replace(/,/g, "")) || 0) : 0;
-      const curBal = Math.max(curLocalBal, curFsBal);
-      const fsNewBal = (curBal + amount).toFixed(2);
+      const extractMaxDocBal = (doc: any): number => {
+        if (!doc) return 0;
+        const candidates = [doc.balance, doc.userBalance, doc.mainBalance, doc.walletBalance];
+        let maxV = 0;
+        for (const c of candidates) {
+          if (c !== undefined && c !== null && c !== "") {
+            const v = parseFloat(String(c).replace(/,/g, ""));
+            if (!isNaN(v) && v > maxV) maxV = v;
+          }
+        }
+        return maxV;
+      };
+
+      const curFsBalDefault = extractMaxDocBal(uDataDefault);
+      const curFsBalCustom = extractMaxDocBal(uDataCustom);
+      const curLocalBal = getLocalUserBalance(candidateUid);
+
+      // Base balance is the maximum confirmed balance across Firestore and local store (never overwrite with stale lower value)
+      const baseBal = Math.max(curLocalBal, curFsBalDefault, curFsBalCustom);
+      const fsNewBal = (baseBal + amount).toFixed(2);
+      updatedBalance = fsNewBal;
 
       const stats = recalculateUserDepositStats(candidateUid);
       const curDep = stats.totalDeposited;
@@ -2469,7 +2480,7 @@ async function approveAndCreditDeposit(orderNoInput: string, paidAmountOverride?
         updatedAt: new Date().toISOString()
       };
 
-      // 3. Write user update to BOTH Firestore databases simultaneously via Admin SDK & REST
+      // 2. Write user update to BOTH Firestore databases simultaneously via REST & Admin SDK
       await Promise.allSettled([
         firestoreRestPatch("users", candidateUid, userUpdatePayload, "(default)"),
         firestoreRestPatch("users", candidateUid, userUpdatePayload, FS_DB_ID)
@@ -2481,10 +2492,12 @@ async function approveAndCreditDeposit(orderNoInput: string, paidAmountOverride?
         db.collection("users").doc(candidateUid).set(userUpdatePayload, { merge: true }).catch(() => {});
       }
 
-      updatedBalance = fsNewBal;
+      // 3. Update local store & in-memory trackers with the newly computed balance
       updateLocalUserBalance(candidateUid, fsNewBal, amount);
-      if (candidateUsername) updateLocalUserBalance(candidateUsername, fsNewBal, amount);
-      console.log(`[approveAndCreditDeposit] Synced to BOTH Firestore databases user ${candidateUid}. New bal: ৳${fsNewBal}`);
+      if (candidateUsername && candidateUsername !== candidateUid && !isGenericUid(candidateUsername)) {
+        updateLocalUserBalance(candidateUsername, fsNewBal, amount);
+      }
+      console.log(`[approveAndCreditDeposit] Successfully credited ৳${amount} to user ${candidateUid}. Base bal: ৳${baseBal}, New bal: ৳${fsNewBal}`);
     } catch (uErr) {
       console.error("[approveAndCreditDeposit] Error updating user balance:", uErr);
     }

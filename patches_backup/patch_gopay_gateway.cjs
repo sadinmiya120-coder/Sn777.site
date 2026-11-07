@@ -9,7 +9,7 @@ const CACHE_VER = "sn777-cache-v70";
 // 2. Define target replacements
 const nagadObj = '{id:"nagad",name:"নগদ",color:"#f7941d",logo:"https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEi-QTVs9eBas6GpK2ydqhcGMQylNU_pN-s36BYRmohiHGhQ1WatvM-iqpa1sjGrZIMl2qw0UNhtBFMeNATQy3PJW5z8Eet99916DdaTFQ7fXTGyfEthPITh57pDMhcU4aPXAVvXwMNCmF_h5xSOBP_tRoUzfED_jRU-tzOU0vJx19y_FYAe6C-7Z_7ajilj/s447/images%20(1).png"}';
 const bkashObj = '{id:"bkash",name:"বিকাশ",color:"#e2136e",logo:"https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEi4UEkhLBUdrPpR2LIahMVOX-QLJ1WG4J1qhr1UUXqDsJYu30zIBFnIuzxDCs5GXkxhvfbjYiiWUNi8hxAFjGCVyntU1_eJ0aGlAjBCPy_0sUgYbyViV9dinzv32zD9fJrdTHUv-sWXy-3AVQwxByAJYVKepxzGIOs6eri4O_UgKPUxSa5Gqkm_t4AbMuny/s554/images%20(18).jpeg"}';
-const usdtObj = '{id:"usdt",name:"USDT TRC20",color:"#26a17b",logo:"https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEj7XQ7e7a7e7a7e7a7e7a7e7a7e7a7e7a7e7a7e7a7e7a7e7a7e7a7e7a7e7a7e7a7e7a7e7a7e7a7e7a7e7a7e7a7e7a7e7a7e7a7e7a7e/s128/usdt.png"}';
+const  = '';
 
 const chips500 = '[{amount:"500",displayOrig:"500",total:"500",bonusPercent:""},{amount:"1000",displayOrig:"1,000",total:"2,000",bonusPercent:"100%"},{amount:"2000",displayOrig:"2,000",total:"4,000",bonusPercent:"100%"},{amount:"5000",displayOrig:"5,000",total:"10,000",bonusPercent:"100%"},{amount:"10000",displayOrig:"10,000",total:"20,000",bonusPercent:"100%"},{amount:"15000",displayOrig:"15,000",total:"30,000",bonusPercent:"100%"},{amount:"20000",displayOrig:"20,000",total:"40,000",bonusPercent:"100%"},{amount:"25000",displayOrig:"25,000",total:"50,000",bonusPercent:"100%"}]';
 const chips200 = '[{amount:"200",displayOrig:"200",total:"200",bonusPercent:""},{amount:"300",displayOrig:"300",total:"300",bonusPercent:""},{amount:"400",displayOrig:"400",total:"400",bonusPercent:""},{amount:"500",displayOrig:"500",total:"500",bonusPercent:""},{amount:"1000",displayOrig:"1,000",total:"2,000",bonusPercent:"100%"},{amount:"2000",displayOrig:"2,000",total:"4,000",bonusPercent:"100%"},{amount:"5000",displayOrig:"5,000",total:"10,000",bonusPercent:"100%"},{amount:"10000",displayOrig:"10,000",total:"20,000",bonusPercent:"100%"},{amount:"15000",displayOrig:"15,000",total:"30,000",bonusPercent:"100%"},{amount:"20000",displayOrig:"20,000",total:"40,000",bonusPercent:"100%"},{amount:"25000",displayOrig:"25,000",total:"50,000",bonusPercent:"100%"}]';
@@ -17,7 +17,7 @@ const chips200 = '[{amount:"200",displayOrig:"200",total:"200",bonusPercent:""},
 function applyPatches(content) {
   // 1. Swap order: Nagad first, bKash second
   const biArrayRegex = /Bi\s*=\s*\[\s*\{id:"bkash"[\s\S]*?\]/;
-  content = content.replace(biArrayRegex, `Bi=[${nagadObj},${bkashObj},${usdtObj}]`);
+  content = content.replace(biArrayRegex, `Bi=[${nagadObj},${bkashObj}]`);
 
   // 2. Change default selected method to nagad
   content = content.replace(/useState\("bkash"\)/g, 'useState("nagad")');

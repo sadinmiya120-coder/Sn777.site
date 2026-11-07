@@ -39,8 +39,8 @@ jsTargets.forEach(filePath => {
   });
 
   // Clean any double commas that might occur from removals
-  if (code.includes(',,')) {
-    code = code.replace(/,,+/g, ',');
+  if (code.includes(',')) {
+    code = code.replace(/,+/g, ',');
     modified = true;
   }
 

@@ -39,8 +39,8 @@ targets.forEach(filePath => {
       (/(\{title:"[^"]+",image:"[^"]+",category:"ক্র্যাশ",isHot:[^}]+\},?)+/g),
       joinedUnique + ","
     );
-    // Cleanup any double commas like ",,"
-    code = code.replace(/,,+/g, ",");
+    // Cleanup any double commas like ","
+    code = code.replace(/,+/g, ",");
 
     fs.writeFileSync(filePath, code, "utf8");
     console.log(`[Deduplicate] Cleaned ${path.basename(filePath)}, unique items count: ${uniqueItems.length}`);
